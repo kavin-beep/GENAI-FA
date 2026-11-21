@@ -7,10 +7,6 @@
 </a>
 
 <p>
-  <a href="https://agronova-genai-fa.streamlit.app"><img src="https://img.shields.io/badge/▶%20Open%20the%20live%20app-agronova--genai--fa.streamlit.app-e8b04a?style=for-the-badge&labelColor=17130e" alt="Open the live app"/></a>
-</p>
-
-<p>
   <img src="https://img.shields.io/badge/Python-3.11+-f2ead9?style=flat-square&logo=python&logoColor=0d0b08&labelColor=e8b04a"/>
   <img src="https://img.shields.io/badge/Streamlit-1.60-f2ead9?style=flat-square&logo=streamlit&logoColor=FF4B4B&labelColor=211b14"/>
   <img src="https://img.shields.io/badge/Groq-gpt--oss--120b-f2ead9?style=flat-square&labelColor=211b14"/>
