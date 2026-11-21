@@ -147,8 +147,11 @@ def transcribe(client: OpenAI, audio: bytes, mime: str = "audio/wav") -> str:
     if getattr(client, "_agro_provider", "") != "groq":
         return ""
     ext = "webm" if "webm" in mime else "mp3" if ("mpeg" in mime or "mp3" in mime) else "wav"
-    r = client.audio.transcriptions.create(model=WHISPER, file=(f"voice.{ext}", audio, mime), response_format="text")
-    return (r if isinstance(r, str) else getattr(r, "text", "")).strip()
+    r = client.audio.transcriptions.create(model=WHISPER, file=(f"voice.{ext}", audio, mime), response_format="verbose_json")
+    text = (r if isinstance(r, str) else getattr(r, "text", "")) or ""
+    lang = getattr(r, "language", None) or (getattr(r, "model_extra", None) or {}).get("language") or ""
+    transcribe.last_language = str(lang).strip().title()   # Whisper's language detection, e.g. "Hindi", "Tamil"
+    return text.strip()
 
 
 def _tools() -> list[dict]:
@@ -174,8 +177,10 @@ def to_messages(system: str, history: list[dict], vision: bool = True) -> list[d
                 note += "\n\n[A photo was attached, but this model cannot see images. Ask the farmer to describe the symptoms.]"
             elif att["mime"].startswith("audio"):
                 if att.get("transcript"):
-                    note += (f"\n\n[Voice note transcript: \"{att['transcript']}\". Answer it, in the language it was "
-                             f"spoken in unless a reply language is set.]")
+                    spoken = att.get("lang") or "the language it was spoken in"
+                    note += (f"\n\n[Voice note transcript (spoken in {spoken}): \"{att['transcript']}\". Answer in "
+                             f"{spoken}, in that language's own script, unless a different reply language is set. "
+                             f"Your answer will be read aloud, so keep sentences short and clear.]")
                 else:
                     note += "\n\n[A voice note was attached but could not be transcribed. Politely ask the farmer to type it.]"
         parts.append({"type": "text", "text": (m.get("content") or "") + note})
@@ -223,7 +228,9 @@ def stream_agent(client: OpenAI, system: str, history: list[dict], s: Settings) 
                 yield Event("tool_call", {"name": "transcribe", "label": "Transcribing voice note", "args": {}})
                 t1 = time.time()
                 try:
+                    transcribe.last_language = ""
                     att["transcript"] = transcribe(client, att["data"], att["mime"])
+                    att["lang"] = getattr(transcribe, "last_language", "")
                 except Exception:
                     att["transcript"] = ""
                 yield Event("tool_result", {"name": "transcribe", "result": {"text": att["transcript"]},
@@ -372,6 +379,8 @@ def stream_agent(client: OpenAI, system: str, history: list[dict], s: Settings) 
             t1 = time.time()
             result = run_tool(c["name"], args)
             yield Event("tool_result", {"name": c["name"], "result": result, "ms": int((time.time() - t1) * 1000)})
+            if c["name"] == "find_reference_images" and isinstance(result, dict) and result.get("images"):
+                yield Event("images", result["images"])
             messages.append({"role": "tool", "tool_call_id": c["id"], "content": json.dumps(result, default=str)[:12000]})
     usage["seconds"] = round(time.time() - t0, 2)
     yield Event("usage", usage)

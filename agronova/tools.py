@@ -229,6 +229,109 @@ def tool_geocode(query: str, **_) -> dict:
     return {"results": hits} if hits else {"error": f"No place found for '{query}'."}
 
 
+# ───────────────────────────── real-time clock ─────────────────────────────
+IST = dt.timezone(dt.timedelta(hours=5, minutes=30), "IST")
+
+
+def now_ist() -> dt.datetime:
+    """Current time in India regardless of the server's own timezone (Streamlit Cloud runs on UTC)."""
+    return dt.datetime.now(IST)
+
+
+def tool_local_time(location: str = "", latitude: float | None = None, longitude: float | None = None, **_) -> dict:
+    """Exact local date/time, timezone, sunrise, sunset and day length for any place (live)."""
+    place = None
+    if (latitude is None or longitude is None) and location:
+        hits = geocode(location, count=1)
+        if not hits:
+            return {"error": f"Could not find '{location}'."}
+        place = hits[0]
+        latitude, longitude = place["latitude"], place["longitude"]
+    if latitude is None or longitude is None:
+        n = now_ist()
+        return {"place": "India (IST)", "local_time": n.strftime("%H:%M"), "date": n.strftime("%A, %d %B %Y"),
+                "timezone": "Asia/Kolkata (UTC+05:30)"}
+    r = requests.get("https://api.open-meteo.com/v1/forecast", timeout=TIMEOUT, headers=UA, params={
+        "latitude": latitude, "longitude": longitude, "timezone": "auto", "forecast_days": 2,
+        "daily": "sunrise,sunset,daylight_duration"})
+    r.raise_for_status()
+    d = r.json()
+    off = dt.timedelta(seconds=d.get("utc_offset_seconds", 0))
+    local = dt.datetime.now(dt.timezone.utc) + off
+    daily = d.get("daily", {})
+    sr, ss = (daily.get("sunrise") or [""])[0], (daily.get("sunset") or [""])[0]
+    hours = off.total_seconds() / 3600
+    out = {"place": place or {"latitude": latitude, "longitude": longitude},
+           "local_time": local.strftime("%H:%M"), "date": local.strftime("%A, %d %B %Y"),
+           "timezone": f"{d.get('timezone')} (UTC{'+' if hours >= 0 else '-'}{int(abs(hours)):02d}:{int(abs(hours) % 1 * 60):02d})",
+           "sunrise": sr[-5:], "sunset": ss[-5:],
+           "daylight_hours": round((daily.get("daylight_duration") or [0])[0] / 3600, 1)}
+    if sr and ss:
+        t = local.strftime("%Y-%m-%dT%H:%M")
+        out["is_daytime"] = sr <= t <= ss
+        out["note"] = ("Daylight now." if out["is_daytime"] else "It is dark now. If a spray is needed, plan it for "
+                       "early morning or dusk tomorrow, when wind is calm and bees are least active.")
+    return out
+
+
+# ───────────────────────────── reference images (Wikipedia / Wikimedia Commons) ─────────────────────────────
+WIKI_UA = {"User-Agent": "AgroNova-SmartFarming/1.0 (educational farming assistant)"}
+_TAG = __import__("re").compile(r"<[^>]+>")
+
+
+def tool_reference_images(query: str, count: int = 4, **_) -> dict:
+    """Real, openly-licensed photos for a pest, disease, deficiency, crop, variety, tool or practice."""
+    count = max(1, min(int(count or 4), 6))
+    images, seen = [], set()
+    try:  # 1) Wikipedia articles' lead images: most reliable for "what does X look like"
+        r = requests.get("https://en.wikipedia.org/w/api.php", headers=WIKI_UA, timeout=TIMEOUT, params={
+            "action": "query", "format": "json", "generator": "search", "gsrsearch": query, "gsrlimit": 6,
+            "prop": "pageimages|info|description", "piprop": "thumbnail", "pithumbsize": 640, "inprop": "url"})
+        pages = sorted((r.json().get("query") or {}).get("pages", {}).values(), key=lambda p: p.get("index", 99))
+        for p in pages:
+            th = (p.get("thumbnail") or {}).get("source")
+            if th and th not in seen and not th.lower().endswith((".svg", ".svg.png")):
+                seen.add(th)
+                images.append({"url": th, "title": p.get("title"), "caption": p.get("description") or p.get("title"),
+                               "page": p.get("fullurl"), "source": "Wikipedia", "license": "see source page"})
+    except Exception:
+        pass
+    if len(images) < count:
+        try:  # 2) Wikimedia Commons photos, with license and author
+            r = requests.get("https://commons.wikimedia.org/w/api.php", headers=WIKI_UA, timeout=TIMEOUT, params={
+                "action": "query", "format": "json", "generator": "search", "gsrsearch": f"{query} filetype:bitmap",
+                "gsrnamespace": 6, "gsrlimit": 8, "prop": "imageinfo", "iiprop": "url|extmetadata", "iiurlwidth": 640})
+            for p in (r.json().get("query") or {}).get("pages", {}).values():
+                ii = (p.get("imageinfo") or [{}])[0]
+                th, md = ii.get("thumburl"), ii.get("extmetadata", {})
+                if not th or th in seen or not ii.get("url", "").lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+                    continue
+                seen.add(th)
+                images.append({"url": th, "title": p.get("title", "").replace("File:", "").rsplit(".", 1)[0],
+                               "caption": _TAG.sub("", (md.get("ImageDescription") or {}).get("value", ""))[:140],
+                               "page": ii.get("descriptionurl"), "source": "Wikimedia Commons",
+                               "license": (md.get("LicenseShortName") or {}).get("value", ""),
+                               "author": _TAG.sub("", (md.get("Artist") or {}).get("value", "")).strip()[:60]})
+                if len(images) >= count:
+                    break
+        except Exception:
+            pass
+    # Relevance: keep photos whose title shares a meaningful word with the query (drops generic/unrelated articles)
+    generic = {"damage", "leaf", "leaves", "larva", "larvae", "plant", "plants", "crop", "crops", "symptom", "symptoms",
+               "photo", "picture", "disease", "pest", "field", "with", "from", "india", "indian", "farm"}
+    keys = [w for w in __import__("re").findall(r"[a-z]{4,}", query.lower()) if w not in generic]
+    if keys:
+        rel = [im for im in images if any(k in (im.get("title") or "").lower() for k in keys)]
+        if rel:
+            images = rel
+    images = images[:count]
+    if not images:
+        return {"error": f"No openly-licensed reference photos found for '{query}'. Describe the symptoms in words."}
+    return {"query": query, "images": images,
+            "note": "These photos are shown to the farmer below your answer. Refer to them (e.g. 'see the reference "
+                    "photos'); do not paste image links yourself."}
+
+
 # ───────────────────────────── registry ─────────────────────────────
 TOOL_SPECS = [
     {
@@ -265,6 +368,29 @@ TOOL_SPECS = [
         "description": "Find coordinates, district and state for a place name.",
         "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]},
         "fn": tool_geocode, "label": "Locating place",
+    },
+    {
+        "name": "get_local_time",
+        "description": "Exact current local date and time, timezone, sunrise, sunset, day length and whether it is daytime "
+                       "for any place. Use for 'what time/date is it', sunrise/sunset, spraying or irrigation timing "
+                       "today, or times in other countries (Kenya, Ghana, Canada…).",
+        "parameters": {"type": "object", "properties": {
+            "location": {"type": "string", "description": "Place name if no coordinates"},
+            "latitude": {"type": "number"}, "longitude": {"type": "number"}}},
+        "fn": tool_local_time, "label": "Checking local time",
+    },
+    {
+        "name": "find_reference_images",
+        "description": "Find real, openly-licensed reference photos (Wikipedia / Wikimedia Commons) of a pest, disease, "
+                       "nutrient deficiency, weed, crop, variety, tool or practice. Use whenever a picture would help the "
+                       "farmer recognise or do something. Search with the precise English or scientific name, e.g. "
+                       "'Alternaria solani tomato leaf', 'pink bollworm cotton', 'drip irrigation'. The photos are shown "
+                       "below your answer automatically.",
+        "parameters": {"type": "object", "properties": {
+            "query": {"type": "string", "description": "Precise English / scientific search terms"},
+            "count": {"type": "integer", "description": "Number of photos, 1-6 (default 4)"}},
+            "required": ["query"]},
+        "fn": tool_reference_images, "label": "Finding reference photos",
     },
 ]
 TOOLS = {t["name"]: t for t in TOOL_SPECS}

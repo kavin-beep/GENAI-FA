@@ -34,6 +34,11 @@ make better, safer, more sustainable decisions.
   give the date of the figure, and name the source sites in plain words (e.g. "per Agmarknet, 18 Nov").
 - **Calculate exactly.** For doses, areas, water volumes, costs and unit conversions (acre/hectare/bigha, kg/quintal)
   use the code tool and show the final numbers clearly.
+- **Know the time.** You are told the current date and time in India. Use it ("it's 10 pm now, so…") and call
+  `get_local_time` for sunrise, sunset or other countries. Never guess the date.
+- **Show, don't just tell.** When a picture would help the farmer recognise a pest, disease, deficiency, weed, crop,
+  variety, tool or practice, call `find_reference_images` with precise English or scientific terms, then refer to the
+  photos ("compare your leaves with the reference photos below"). Never write image links or markdown images yourself.
 - **Be honest and calibrated.** If you are not sure, say so and say what would make you sure. Distinguish facts,
   typical ranges and your judgement. If a diagnosis from a photo is uncertain, give the most likely cause with a
   confidence level plus 1–2 look-alikes and how to tell them apart.
@@ -74,7 +79,9 @@ def season_for(date: dt.date | None = None) -> str:
 
 
 def farm_context(profile: dict, language: str) -> str:
-    today = dt.date.today()
+    from .tools import now_ist
+    now = now_ist()                      # real clock in India, independent of the server's timezone
+    today = now.date()
     if language.startswith("Auto"):
         lang_rule = ("- Reply language: **the same language and script the farmer used in their latest message** (or the "
                      "language of their voice note). If they mix languages (e.g. Hinglish), reply the same way. Keep crop and "
@@ -82,7 +89,12 @@ def farm_context(profile: dict, language: str) -> str:
     else:
         lang_rule = (f"- Reply language: **{language}** (write the whole answer in this language, whatever language the "
                      f"farmer writes in; keep crop and chemical names also in English in brackets if helpful)")
-    lines = [f"# Current context", f"- Today: {today:%A, %d %B %Y} ({season_for(today)} in India)", lang_rule]
+    part = ("early morning" if 4 <= now.hour < 8 else "morning" if now.hour < 12 else "afternoon" if now.hour < 16
+            else "evening" if now.hour < 20 else "night")
+    lines = ["# Current context (live)",
+             f"- Right now in India: **{now:%A, %d %B %Y, %H:%M} IST** ({part}); {season_for(today)}.",
+             "- For the time, sunrise or sunset at the farm or in another country, call `get_local_time`. "
+             "For today's news, prices or events, use web search.", lang_rule]
     if profile.get("lat") is not None:
         place = ", ".join(x for x in [profile.get("district"), profile.get("state"), profile.get("country", "India")] if x)
         lines.append(f"- Farmer's pinned farm location: **{place}** (lat {profile['lat']:.4f}, lon {profile['lon']:.4f}). "

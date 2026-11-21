@@ -103,13 +103,22 @@ def lang_code(text: str = "") -> str:
     return "en-IN"
 
 
-def speak_button(text: str, key: str) -> None:
-    """Read-aloud using the device's own voices (works offline, covers Indian languages)."""
+def speak_button(text: str, key: str, autoplay: bool = False, lang: str | None = None) -> None:
+    """Read-aloud using the device's own voices (covers Indian languages on Android/Chrome/Edge).
+
+    autoplay=True speaks immediately, once (used when the farmer asked by voice). `lang` overrides the voice language,
+    e.g. the language Whisper heard; otherwise it comes from the reply-language setting or the answer's script."""
     plain = re.sub(r"\|[-: |]+\|", " ", text)
     plain = re.sub(r"[#*_`>|]+", " ", plain)
     plain = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", plain)
     plain = re.sub(r"\s+", " ", plain).strip()[:4000]
     payload = json.dumps(plain)
+    code = lang or lang_code(plain)
+    auto_js = ""
+    if autoplay:
+        auto_js = ("try { if(!P.sessionStorage.getItem(KEY)) { P.sessionStorage.setItem(KEY,'1');"
+                   " const go=()=>setTimeout(speak,350); if(S.getVoices().length) go();"
+                   " else { S.onvoiceschanged=go; setTimeout(go,1200); } } } catch(e) {}")
     st.iframe(f"""<!doctype html><html><head><meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500&display=swap" rel="stylesheet">
 <style>html,body{{margin:0;background:transparent;overflow:hidden}}
@@ -117,16 +126,36 @@ button{{font:500 13px 'Inter Tight',sans-serif;color:#f2ead9;background:#211b14;
 cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .3s}}button:hover{{background:#2b231a}}
 i{{width:7px;height:7px;border-radius:50%;background:#a59c8a}}button.on i{{background:#e8b04a;animation:p 1s infinite}}
 @keyframes p{{50%{{opacity:.3}}}}</style></head><body>
-<button id="b"><i></i><span>Listen</span></button>
+<button id="b" title="Voice: {code}"><i></i><span>Listen</span></button>
 <script>
-const S=(window.parent&&window.parent.speechSynthesis)||window.speechSynthesis, U=(window.parent&&window.parent.SpeechSynthesisUtterance)||SpeechSynthesisUtterance;
-const b=document.getElementById('b'), t=b.querySelector('span'), text={payload}, lang="{lang_code(plain)}";
+const P=window.parent||window, S=P.speechSynthesis, U=P.SpeechSynthesisUtterance;
+const b=document.getElementById('b'), t=b.querySelector('span'), text={payload}, lang="{code}", KEY="agro_spoken_{key}";
 function reset(){{b.classList.remove('on');t.textContent='Listen';}}
-b.onclick=()=>{{ if(S.speaking){{S.cancel();reset();return;}}
-  const u=new U(text); u.lang=lang; u.rate=.97;
-  const v=S.getVoices().find(v=>v.lang===lang)||S.getVoices().find(v=>v.lang.startsWith(lang.slice(0,2))); if(v) u.voice=v;
-  u.onend=reset; u.onerror=reset; S.speak(u); b.classList.add('on'); t.textContent='Stop'; }};
+function pickVoice(){{ const vs=S.getVoices(); return vs.find(v=>v.lang.toLowerCase()===lang.toLowerCase())
+  || vs.find(v=>v.lang.toLowerCase().startsWith(lang.slice(0,2).toLowerCase()))
+  || (lang.endsWith('-IN') ? vs.find(v=>v.lang==='hi-IN') : null); }}
+function speak(){{ S.cancel(); const parts=text.match(/[^.!?।॥]+[.!?।॥]?/g)||[text];
+  const v=pickVoice(); let i=0;
+  const next=()=>{{ if(i>=parts.length){{reset();return;}} const u=new U(parts[i++].trim()); u.lang=lang; u.rate=.96; if(v) u.voice=v;
+    u.onend=next; u.onerror=reset; S.speak(u); }};
+  b.classList.add('on'); t.textContent='Stop'; next(); }}
+b.onclick=()=>{{ if(S.speaking){{S.cancel();reset();return;}} speak(); }};
+{auto_js}
 </script></body></html>""", height=38)
+
+
+def gallery_html(images: list[dict]) -> str:
+    """Reference photos the AI found (Wikipedia / Wikimedia Commons), with captions and attribution."""
+    if not images:
+        return ""
+    cards = []
+    for im in images[:6]:
+        cap = html.escape((im.get("title") or "")[:60])
+        meta = [x for x in [im.get("source"), im.get("license"), im.get("author")] if x and x != "see source page"]
+        sub = html.escape(" · ".join(meta)[:80])
+        cards.append(f"<a class='gimg' href='{html.escape(im.get('page') or im['url'])}' target='_blank' rel='noopener'>"
+                     f"<img src='{html.escape(im['url'])}' alt='{cap}' loading='lazy'/><b>{cap}</b><span>{sub}</span></a>")
+    return "<div class='gal'><span class='lab'>Reference photos</span><div class='gal-row'>" + "".join(cards) + "</div></div>"
 
 
 def sources_html(srcs: list[dict]) -> str:
@@ -168,14 +197,19 @@ def tool_chips(trace: list[dict]) -> str:
 def render_stream(events, container) -> dict:
     """Render agent events live inside `container`; returns the finished assistant message."""
     with container:
-        trace_ph, think_slot, answer_ph, src_ph = st.empty(), st.empty(), st.empty(), st.empty()
+        trace_ph, think_slot, answer_ph, gal_ph, src_ph = st.empty(), st.empty(), st.empty(), st.empty(), st.empty()
         answer_ph.html("<div class='typing'><i></i><i></i><i></i></div>")
-    text, thoughts, trace, usage, status, think_ph, sources = "", "", [], {}, None, None, []
+    text, thoughts, trace, usage, status, think_ph, sources, images = "", "", [], {}, None, None, [], []
     t0, last = time.time(), 0.0
     for ev in events:
         if ev.kind == "sources":
             sources += ev.data
             src_ph.html(sources_html(sources))
+            continue
+        if ev.kind == "images":
+            known = {x["url"] for x in images}
+            images += [im for im in ev.data if im["url"] not in known]
+            gal_ph.html(gallery_html(images))
             continue
         if ev.kind == "thought":
             thoughts += ev.data
@@ -207,13 +241,15 @@ def render_stream(events, container) -> dict:
     text = clean_answer(text)
     answer_ph.markdown(text or "_No answer came back. Try again, or pick another model in the sidebar._")
     return {"role": "assistant", "content": text, "thoughts": thoughts, "tools": trace, "usage": usage,
-            "sources": sources, "model": usage.get("model") or state.settings().model, "id": uuid.uuid4().hex[:10]}
+            "sources": sources, "images": images, "model": usage.get("model") or state.settings().model,
+            "id": uuid.uuid4().hex[:10]}
 
 
 BASELINE_PATH = state.LOG_PATH.parent / "baseline.json"
 TOOL_LABELS = {"get_weather_forecast": "Checked live weather", "get_soil_properties": "Read soil profile",
                "get_crop_calendar": "Consulted crop calendar", "geocode_place": "Located place", "web_search": "Searched the web",
-               "web_open": "Read a web page", "code": "Ran a calculation", "transcribe": "Transcribed voice", "vision": "Looked at photo"}
+               "web_open": "Read a web page", "code": "Ran a calculation", "transcribe": "Transcribed voice", "vision": "Looked at photo",
+               "get_local_time": "Checked local time", "find_reference_images": "Found reference photos"}
 
 
 @st.cache_data(show_spinner=False)
@@ -254,11 +290,13 @@ def system_prompt(extra: str = "") -> str:
 
 def location_chip() -> None:
     lab = state.place_label()
+    now = tools.now_ist()
+    clock = f"<span class='loc clock'>Live · {now:%H:%M} IST · {now:%a %d %b}</span>"
     if lab:
         p = st.session_state.profile
-        st.html(f"<span class='loc on'>{html.escape(lab)} &nbsp;·&nbsp; {p['lat']:.3f}, {p['lon']:.3f}</span>")
+        st.html(f"<div class='chips'><span class='loc on'>{html.escape(lab)} &nbsp;·&nbsp; {p['lat']:.3f}, {p['lon']:.3f}</span>{clock}</div>")
     else:
-        st.html("<span class='loc'>No farm pinned — set one in Farm Locator</span>")
+        st.html(f"<div class='chips'><span class='loc'>No farm pinned — set one in Farm Locator</span>{clock}</div>")
 
 
 def footer():
@@ -742,6 +780,8 @@ def page_chat():
                     with st.expander("Thinking"):
                         st.markdown(m["thoughts"])
                 st.markdown(m["content"])
+                if m.get("images"):
+                    st.html(gallery_html(m["images"]))
                 if m.get("sources"):
                     st.html(sources_html(m["sources"]))
                 u = m.get("usage", {})
@@ -750,7 +790,10 @@ def page_chat():
                     meta += f" · {u['tool_calls']} live lookups"
                 c0, c1, c2, c3 = st.columns([1.3, 4, 1.1, 1.4], vertical_alignment="center")
                 with c0:
-                    speak_button(m["content"], key=m["id"])
+                    auto = bool(m.get("autospeak")) and i == len(msgs) - 1 and not m.get("spoken")
+                    speak_button(m["content"], key=m["id"], autoplay=auto, lang=m.get("voice_lang"))
+                    if auto:
+                        m["spoken"] = True
                 c1.caption(meta)
                 with c2:
                     fb = st.feedback("thumbs", key=f"fb_{m['id']}")
@@ -803,6 +846,12 @@ def generate_reply():
     with st.chat_message("assistant", avatar=AV_AI):
         msg = render_stream(llm.stream_agent(client, system_prompt(), st.session_state.messages, state.settings()), st.container())
         if msg["content"] and msg["content"] != llm.REFUSAL:
+            last_user = st.session_state.messages[-1]
+            voice = next((a for a in last_user.get("attachments", []) or [] if a["mime"].startswith("audio")), None)
+            if voice is not None:                       # asked by voice → answer is spoken back automatically
+                msg["autospeak"] = True
+                heard = (voice.get("lang") or "").title()
+                msg["voice_lang"] = next((v for k, v in LANG_CODES.items() if heard and k in heard), None)
             msg["followups"] = llm.suggest_followups(client, st.session_state.messages[-1]["content"], msg["content"],
                                                      "the same language as the farmer's question" if st.session_state.get("language", "").startswith("Auto")
                                                      else st.session_state.get("language", "English"))
@@ -897,6 +946,8 @@ def page_studio():
                 if m.get("tools"):
                     st.html(tool_chips(m["tools"]))
                 st.markdown(m["content"])
+                if m.get("images"):
+                    st.html(gallery_html(m["images"]))
                 if m.get("sources"):
                     st.html(sources_html(m["sources"]))
                 speak_button(m["content"], key=f"studio_{m['id']}")

@@ -330,6 +330,20 @@ div.st-key-panel_ask [data-baseweb="input"] input{font-size:1.05rem!important}
 .fn{grid-column:2/4;font:400 .66rem var(--mono);color:var(--dim);letter-spacing:.04em;margin-top:.25rem}
 @media (max-width:760px){.fit{grid-template-columns:1fr 2.4rem}.fit .fbar{grid-column:1/3;grid-row:2}.fn{grid-column:1/3}}
 
+/* ── reference photo gallery + live clock ── */
+.gal{margin:1rem 0 .4rem}
+.gal .lab{display:block;font:500 .64rem var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:.6rem}
+.gal-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:.7rem}
+.gimg{display:flex;flex-direction:column;gap:.25rem;background:var(--soil2);border-radius:14px;overflow:hidden;text-decoration:none!important;
+  padding-bottom:.6rem;transition:transform .5s var(--ease),background .3s;animation:fade .6s var(--ease) both}
+.gimg:hover{transform:translateY(-3px);background:var(--soil3)}
+.gimg img{width:100%;aspect-ratio:4/3;object-fit:cover;filter:saturate(.95);transition:transform 1s var(--ease)}
+.gimg:hover img{transform:scale(1.05)}
+.gimg b{font:400 1rem/1.15 var(--serif);color:var(--cream);padding:0 .7rem}
+.gimg span{font:400 .6rem var(--mono);color:var(--dim);padding:0 .7rem;letter-spacing:.03em}
+.chips{display:flex;flex-wrap:wrap;gap:1.2rem;align-items:center}
+.loc.clock{color:var(--gold2)}.loc.clock:before{background:var(--gold);animation:pulse 1.6s ease-in-out infinite}
+
 /* ── status checks ── */
 .health{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.7rem;margin:.4rem 0 1.6rem}
 .hc{background:var(--soil);border-radius:14px;padding:.9rem 1rem;display:flex;flex-direction:column;gap:.2rem}
