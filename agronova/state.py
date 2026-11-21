@@ -22,7 +22,7 @@ def init() -> None:
     ss.setdefault("profile", {"lat": None, "lon": None, "district": "", "state": "", "country": "India",
                               "crop": "", "stage": "", "farm_size": "", "irrigation": "", "prefs": []})
     ss.setdefault("messages", [])
-    ss.setdefault("language", "English")
+    ss.setdefault("language", "Auto — match my language")
     ss.setdefault("validation", [])
     ss.setdefault("map_ts", None)
 
@@ -41,7 +41,7 @@ def api_key() -> str:
 def settings() -> Settings:
     ss = st.session_state
     return Settings(model=ss.get("model") or "openai/gpt-oss-120b", temperature=ss.get("temperature", 0.6),
-                    max_tokens=ss.get("max_tokens", 2048), thinking=ss.get("thinking", True), tools=ss.get("use_tools", True),
+                    max_tokens=ss.get("max_tokens", 1400), thinking=ss.get("thinking", True), tools=ss.get("use_tools", True),
                     web=ss.get("use_web", True), guard=ss.get("use_guard", True))
 
 

@@ -3,9 +3,18 @@ from __future__ import annotations
 
 import datetime as dt
 
-LANGUAGES = ["English", "हिन्दी Hindi", "मराठी Marathi", "தமிழ் Tamil", "తెలుగు Telugu", "ಕನ್ನಡ Kannada",
-             "বাংলা Bengali", "ਪੰਜਾਬੀ Punjabi", "ગુજરાતી Gujarati", "മലയാളം Malayalam", "ଓଡ଼ିଆ Odia",
-             "Kiswahili", "Français", "Português", "Español", "Twi (Akan)"]
+# All 22 languages of the Eighth Schedule of the Constitution of India, then major regional farming languages,
+# then the pilot-country languages (Ghana, Kenya, Canada) and other global ones.
+INDIAN_SCHEDULED = [
+    "অসমীয়া Assamese", "বাংলা Bengali", "बड़ो Bodo", "डोगरी Dogri", "ગુજરાતી Gujarati", "हिन्दी Hindi", "ಕನ್ನಡ Kannada",
+    "کٲشُر Kashmiri", "कोंकणी Konkani", "मैथिली Maithili", "മലയാളം Malayalam", "মৈতৈলোন্ Manipuri (Meitei)", "मराठी Marathi",
+    "नेपाली Nepali", "ଓଡ଼ିଆ Odia", "ਪੰਜਾਬੀ Punjabi", "संस्कृतम् Sanskrit", "ᱥᱟᱱᱛᱟᱲᱤ Santali", "سنڌي Sindhi", "தமிழ் Tamil",
+    "తెలుగు Telugu", "اُردُو Urdu",
+]
+INDIAN_REGIONAL = ["भोजपुरी Bhojpuri", "राजस्थानी Rajasthani (Marwari)", "हरियाणवी Haryanvi", "छत्तीसगढ़ी Chhattisgarhi",
+                   "ತುಳು Tulu", "Khasi", "Mizo", "Hinglish (Hindi + English)"]
+GLOBAL = ["Kiswahili", "Twi (Akan)", "Français", "Português", "Español"]
+LANGUAGES = ["Auto — match my language", "English"] + INDIAN_SCHEDULED + INDIAN_REGIONAL + GLOBAL
 
 # The assistant's "constitution": modelled on how Claude behaves — reasons first, is honest about
 # uncertainty, uses tools instead of guessing, formats for the reader, and stays safe.
@@ -66,9 +75,14 @@ def season_for(date: dt.date | None = None) -> str:
 
 def farm_context(profile: dict, language: str) -> str:
     today = dt.date.today()
-    lines = [f"# Current context", f"- Today: {today:%A, %d %B %Y} ({season_for(today)} in India)",
-             f"- Reply language: **{language}** (write the whole answer in this language; keep crop and chemical "
-             f"names also in English in brackets if helpful)"]
+    if language.startswith("Auto"):
+        lang_rule = ("- Reply language: **the same language and script the farmer used in their latest message** (or the "
+                     "language of their voice note). If they mix languages (e.g. Hinglish), reply the same way. Keep crop and "
+                     "chemical names also in English in brackets when helpful.")
+    else:
+        lang_rule = (f"- Reply language: **{language}** (write the whole answer in this language, whatever language the "
+                     f"farmer writes in; keep crop and chemical names also in English in brackets if helpful)")
+    lines = [f"# Current context", f"- Today: {today:%A, %d %B %Y} ({season_for(today)} in India)", lang_rule]
     if profile.get("lat") is not None:
         place = ", ".join(x for x in [profile.get("district"), profile.get("state"), profile.get("country", "India")] if x)
         lines.append(f"- Farmer's pinned farm location: **{place}** (lat {profile['lat']:.4f}, lon {profile['lon']:.4f}). "

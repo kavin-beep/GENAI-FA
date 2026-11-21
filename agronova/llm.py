@@ -35,7 +35,8 @@ PREFERRED_MODELS = PROVIDERS["groq"]["preferred"] + PROVIDERS["xai"]["preferred"
 MAX_TOOL_ROUNDS = 5
 WHISPER = "whisper-large-v3-turbo"
 VISION_MODELS = ["qwen/qwen3.8-27b", "meta-llama/llama-4-maverick-17b-128e-instruct", "meta-llama/llama-4-scout-17b-16e-instruct"]
-FAST_MODEL = "openai/gpt-oss-20b"                      # quick side-tasks: follow-ups, grading
+FAST_MODEL = "openai/gpt-oss-20b"
+FALLBACK_CHAIN = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"]   # separate rate budgets per model                      # quick side-tasks: follow-ups, grading
 GUARD_MODEL = "meta-llama/llama-prompt-guard-2-86m"    # jailbreak / prompt-injection classifier
 GUARD_THRESHOLD = 0.9
 # Groq-hosted server-side tools for gpt-oss models: live web search + a Python sandbox
@@ -61,7 +62,7 @@ class Event:
 class Settings:
     model: str = "openai/gpt-oss-120b"
     temperature: float = 0.6
-    max_tokens: int = 2048
+    max_tokens: int = 1400
     thinking: bool = True
     tools: bool = True
     web: bool = True          # built-in web search + code interpreter (Groq gpt-oss)
@@ -129,7 +130,7 @@ def provider_for(key: str) -> str:
 
 def make_client(api_key: str) -> OpenAI:
     prov = provider_for(api_key)
-    c = OpenAI(api_key=api_key.strip(), base_url=PROVIDERS[prov]["base_url"], timeout=120, max_retries=2)
+    c = OpenAI(api_key=api_key.strip(), base_url=PROVIDERS[prov]["base_url"], timeout=120, max_retries=4)
     c._agro_provider = prov  # remembered for model ranking and voice transcription
     return c
 
@@ -255,6 +256,7 @@ def stream_agent(client: OpenAI, system: str, history: list[dict], s: Settings) 
 
     use_web = s.web and builtin_ok(client, model)
     seen_sources: set[str] = set()
+    tried: set[str] = set()
     for _round in range(MAX_TOOL_ROUNDS + 1):
         calls: dict[int, dict] = {}
         text_buf = ""
@@ -314,6 +316,28 @@ def stream_agent(client: OpenAI, system: str, history: list[dict], s: Settings) 
             low = str(e).lower()
             if not emitted and want_usage and "stream_options" in low:
                 want_usage = False
+                continue
+            rate_limited = getattr(e, "status_code", None) == 429 or "rate limit" in low
+            if not emitted and use_web and rate_limited:
+                use_web = False      # web search pages are token-heavy; retry the turn without them
+                yield Event("tool_call", {"name": "fallback", "label": "Busy — answering without web search", "args": {}})
+                yield Event("tool_result", {"name": "fallback", "result": {}, "ms": 0})
+                time.sleep(2)
+                continue
+            if not emitted and rate_limited and getattr(client, "_agro_provider", "") == "groq":
+                # Each Groq model has its own per-minute token budget → hand the turn to the next model in line
+                chain = [m for m in FALLBACK_CHAIN if m != model and m not in tried]
+                if chain:
+                    tried.add(model)
+                    model = chain[0]
+                    use_web = use_web and builtin_ok(client, model)
+                    yield Event("tool_call", {"name": "fallback", "label": "Busy — switching to " +
+                                              MODEL_LABELS.get(model, model).split(" (")[0], "args": {}})
+                    yield Event("tool_result", {"name": "fallback", "result": {"model": model}, "ms": 0})
+                    usage["model"] = model
+                    continue
+            if not emitted and rate_limited and _round < 2:
+                time.sleep(6 * (_round + 1))   # brief backoff, then try once more
                 continue
             if not emitted and use_web and ("browser" in low or "code_interpreter" in low or "built-in" in low):
                 use_web = False

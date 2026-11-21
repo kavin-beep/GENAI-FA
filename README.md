@@ -3,7 +3,7 @@
 <img src="docs/media/banner.svg" alt="AgroNova — Smart Farming Assistant" width="100%"/>
 
 <a href="https://agronova-genai-fa.streamlit.app">
-  <img src="https://readme-typing-svg.demolab.com?font=Instrument+Serif&size=30&duration=3200&pause=900&color=F3C978&center=true&vCenter=true&width=860&height=56&lines=A+thinking+AI+agronomist+for+every+farm;Live+weather+%C2%B7+real+soil+maps+%C2%B7+web+search;Pin+your+field+on+an+interactive+India+map;Answers+in+16+languages+%E2%80%94+with+the+why" alt="Typing tagline"/>
+  <img src="https://readme-typing-svg.demolab.com?font=Instrument+Serif&size=30&duration=3200&pause=900&color=F3C978&center=true&vCenter=true&width=860&height=56&lines=A+thinking+AI+agronomist+for+every+farm;Live+weather+%C2%B7+real+soil+maps+%C2%B7+web+search;Pin+your+field+on+an+interactive+India+map;All+22+Indian+languages+%E2%80%94+with+the+why" alt="Typing tagline"/>
 </a>
 
 <p>
@@ -75,7 +75,7 @@ AgroNova **thinks**, **fetches live data** (weather, soil, crop calendar, web), 
 - 🔊 **Listen**: reads every answer aloud in your language
 - 💬 **"Ask next"**: three follow-up suggestions after each answer
 - 🛡️ **Safety guard**: Llama Prompt Guard blocks jailbreaks
-- 🌍 **16 languages**: Hindi, Marathi, Tamil, Telugu, Kannada, Bengali, Punjabi, Gujarati, Malayalam, Odia, Swahili, French, Portuguese, Spanish, Twi, English
+- 🌍 **All 22 Indian scheduled languages** (Assamese, Bengali, Bodo, Dogri, Gujarati, Hindi, Kannada, Kashmiri, Konkani, Maithili, Malayalam, Manipuri, Marathi, Nepali, Odia, Punjabi, Sanskrit, Santali, Sindhi, Tamil, Telugu, Urdu) + Bhojpuri, Rajasthani, Haryanvi, Chhattisgarhi, Tulu, Khasi, Mizo, Hinglish + Swahili, Twi, French, Portuguese, Spanish, English. **Auto mode** replies in whatever language the farmer uses
 
 </td>
 </tr>

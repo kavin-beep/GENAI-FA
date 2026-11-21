@@ -276,6 +276,79 @@ button[data-testid="stBaseButton-primary"] *,button[data-testid="stBaseButton-pr
 .loc{display:inline-flex;align-items:center;gap:.6rem;font:500 .7rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
 .loc:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--dim)}
 .loc.on{color:var(--cream)}.loc.on:before{background:var(--leaf);box-shadow:0 0 0 4px rgba(169,212,111,.15)}
+
+/* ── home: live hubs + ask ── */
+.hubs{display:grid;grid-template-columns:repeat(6,1fr);gap:.7rem}
+.hub{background:var(--soil);border-radius:16px;padding:1rem;display:flex;flex-direction:column;gap:.2rem;transition:transform .5s var(--ease),background .3s}
+.hub:hover{transform:translateY(-4px);background:var(--soil2)}
+.hn{font:400 1.45rem/1 var(--serif);color:var(--cream)}.hs{font:500 .62rem var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.ht{font:400 2.3rem/1 var(--serif);color:var(--gold2);margin:.6rem 0 .1rem}.ht small{font-size:.9rem;color:var(--mut)}
+.hk{font-size:.85rem;color:#e6ddca}.hm{font:400 .66rem/1.55 var(--mono);color:var(--mut);margin:.35rem 0 .5rem}
+.hub .tg{align-self:flex-start}
+@media (max-width:1000px){.hubs{grid-template-columns:repeat(2,1fr)}}
+div.st-key-panel_ask{margin:-1.5rem 0 1rem;padding:2rem 2rem 1.6rem!important;background:linear-gradient(135deg,#211b14,#17130e)!important}
+div.st-key-panel_ask [data-baseweb="input"]{background:var(--ink)!important;min-height:3.2rem}
+div.st-key-panel_ask [data-baseweb="input"] input{font-size:1.05rem!important}
+.month .steps{margin-top:0}
+
+/* ── field planner week ── */
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:.7rem;margin:.4rem 0 .6rem}
+.day{background:var(--soil);border-radius:16px;padding:1rem .9rem;display:flex;flex-direction:column;gap:.25rem;transition:transform .5s var(--ease),background .3s}
+.day:hover{transform:translateY(-4px);background:var(--soil2)}
+.dw{font:500 .66rem var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.dd{font-size:.78rem;color:var(--dim)}
+.dt{font:400 2rem/1 var(--serif);color:var(--cream);margin:.3rem 0 .1rem}.dt small{font-size:1rem;color:var(--mut)}
+.ds{font-size:.82rem;color:#e6ddca}
+.dm{font:400 .66rem/1.5 var(--mono);color:var(--mut);margin:.3rem 0}
+.tgs{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:auto}
+.tg{font:500 .6rem var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:.25rem .45rem;border-radius:6px;background:var(--soil3);color:var(--mut)}
+.tg.leaf{background:rgba(169,212,111,.14);color:var(--leaf)}.tg.gold{background:rgba(232,176,74,.16);color:var(--gold2)}
+.tg.clay{background:rgba(212,105,63,.18);color:#f0a07c}.tg.sky{background:rgba(143,195,214,.16);color:var(--sky)}.tg.dim{opacity:.7}
+@media (max-width:900px){.week{grid-template-columns:repeat(2,1fr)}}
+.texture{display:flex;height:14px;border-radius:7px;overflow:hidden;margin-top:1rem;gap:2px}
+.season{display:flex;flex-direction:column;gap:.55rem;margin-top:.4rem}
+.srow{display:grid;grid-template-columns:4.2rem 1fr;align-items:center;gap:.6rem}
+.srow b{font:500 .7rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.months{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}
+.months i{height:16px;border-radius:4px;background:var(--soil3)}.months i.on{background:var(--c)}
+.months i.now{outline:2px solid var(--cream);outline-offset:1px}
+.months.lab span{font:500 .62rem var(--mono);text-align:center;color:var(--dim)}.months.lab span.now{color:var(--cream)}
+
+/* ── disease risk + crop fit ── */
+.risk{display:flex;flex-direction:column;gap:.2rem;padding:1rem 1.1rem;border-radius:14px;background:var(--soil2)}
+.risk b{font:400 2.6rem/1 var(--serif)}.risk span{font:500 .66rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.risk.leaf b{color:var(--leaf)}.risk.gold b{color:var(--gold2)}.risk.clay b{color:#f0a07c}
+.fits{display:flex;flex-direction:column;gap:.15rem;margin-top:.4rem}
+.fit{display:grid;grid-template-columns:12rem 1fr 2.6rem;grid-template-rows:auto auto;column-gap:1rem;align-items:center;padding:.7rem 0;border-bottom:1px solid var(--rule)}
+.fit b{font:400 1.25rem var(--serif);color:var(--cream)}
+.fbar{height:8px;border-radius:4px;background:var(--soil3);overflow:hidden}.fbar i{display:block;height:100%;border-radius:4px;transition:width 1.4s var(--ease)}
+.fs{font:500 .9rem var(--mono);color:var(--cream);text-align:right}
+.fn{grid-column:2/4;font:400 .66rem var(--mono);color:var(--dim);letter-spacing:.04em;margin-top:.25rem}
+@media (max-width:760px){.fit{grid-template-columns:1fr 2.4rem}.fit .fbar{grid-column:1/3;grid-row:2}.fn{grid-column:1/3}}
+
+/* ── status checks ── */
+.health{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.7rem;margin:.4rem 0 1.6rem}
+.hc{background:var(--soil);border-radius:14px;padding:.9rem 1rem;display:flex;flex-direction:column;gap:.2rem}
+.hc b{font:500 .95rem var(--sans);color:var(--cream);display:flex;align-items:center;gap:.5rem}
+.hc b:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--leaf);box-shadow:0 0 0 4px rgba(169,212,111,.15)}
+.hc.bad b:before{background:var(--clay);box-shadow:0 0 0 4px rgba(212,105,63,.18)}
+.hc span{font:400 .7rem var(--mono);color:var(--mut)}
+.badge{display:inline-flex;align-items:center;gap:.5rem;font:500 .66rem var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--gold2);background:rgba(232,176,74,.1);padding:.4rem .7rem;border-radius:999px;margin:.2rem 0 1rem}
+
+/* ── journey + prompt anatomy ── */
+.journey{display:grid;grid-template-columns:repeat(5,1fr);gap:.7rem;margin:1rem 0}
+.journey div{background:var(--soil);border-radius:16px;padding:1.1rem 1rem;position:relative}
+.journey div:not(:last-child):after{content:"→";position:absolute;right:-.7rem;top:50%;transform:translateY(-50%);color:var(--gold);font-size:1.1rem;z-index:2}
+.journey i{font:500 .66rem var(--mono);color:var(--gold);font-style:normal;letter-spacing:.14em}
+.journey b{display:block;font:400 1.35rem/1.1 var(--serif);color:var(--cream);margin:.4rem 0 .3rem}
+.journey span{font-size:.84rem;color:var(--mut)}
+@media (max-width:900px){.journey{grid-template-columns:1fr}.journey div:after{display:none}}
+.anat{background:var(--soil);border-radius:16px;padding:1.3rem 1.4rem;font:400 1.05rem/1.9 var(--sans);color:#e6ddca}
+.anat mark{background:none;padding:.1rem .35rem;border-radius:6px;color:var(--ink);font-weight:500}
+.anat .k1{background:var(--gold)}.anat .k2{background:var(--leaf)}.anat .k3{background:var(--sky)}.anat .k4{background:#f0a07c}
+.legend{display:flex;flex-wrap:wrap;gap:1rem;margin-top:.8rem;font:500 .66rem var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.legend span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:.4rem;vertical-align:-1px;background:var(--c)}
 .srcs{display:flex;flex-wrap:wrap;gap:.5rem;align-items:stretch;margin:1rem 0 .4rem}
 .srcs .lab{font:500 .64rem var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);align-self:center;margin-right:.3rem}
 .srcs a{display:flex;flex-direction:column;gap:.1rem;max-width:230px;padding:.55rem .8rem;border-radius:12px;background:var(--soil2);
@@ -301,6 +374,7 @@ FX_JS = r"""
 <script>
 (function(){
   const P = window.parent, D = P.document;
+  try { const fe = window.frameElement; if (fe) fe.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none'; } catch (e) {}
   if (P.__agronovaFX) { P.__agronovaFX.refresh && P.__agronovaFX.refresh(); return; }
   P.__agronovaFX = {};
   const reduce = P.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -327,18 +401,46 @@ FX_JS = r"""
   const vwrap = D.createElement('div'); vwrap.id = 'agro-video';
   const veil = D.createElement('div'); veil.id = 'agro-veil';
   const grain = D.createElement('div'); grain.id = 'agro-grain';
-  const mk = () => { const v = D.createElement('video'); v.muted = true; v.defaultMuted = true; v.playsInline = true;
-    v.setAttribute('muted',''); v.setAttribute('playsinline',''); v.preload = 'auto'; vwrap.appendChild(v); return v; };
-  const A = mk(), B = mk(); let idx = 0, cur = A, nxt = B;
+  // Hide this helper iframe itself (prevents a stray empty frame on narrow layouts)
+  try { const fe = window.frameElement; if (fe) fe.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none'; } catch (e) {}
+
+  /* Robust two-player playlist:
+     - each player loops, so a clip never "ends" into black
+     - the next clip is preloaded right after every swap, and a swap only happens when it is ready
+     - a single `busy` flag means swaps can never overlap (the old bug: overlapping swaps on slow networks)
+     - a watchdog restarts a paused/stalled player and skips clips that error out
+     - a still photo sits underneath, so the worst case is a warm image, never a black screen */
+  vwrap.style.background = '#0d0b08 url(https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1600&q=60) center/cover no-repeat';
+  const mk = () => { const v = D.createElement('video'); v.muted = true; v.defaultMuted = true; v.playsInline = true; v.loop = true;
+    v.setAttribute('muted',''); v.setAttribute('playsinline',''); v.setAttribute('loop',''); v.preload = 'auto'; vwrap.appendChild(v); return v; };
+  const A = mk(), B = mk(); let idx = 0, cur = A, nxt = B, busy = false, lastT = -1, stuck = 0;
   const src = i => `https://assets.mixkit.co/videos/${CLIPS[i]}/${CLIPS[i]}-${Q}.mp4`;
-  A.src = src(0); A.addEventListener('playing', ()=>A.classList.add('on'), {once:true}); A.play().catch(()=>A.classList.add('on'));
-  function swap(){ idx = (idx + 1) % CLIPS.length; nxt.src = src(idx);
-    const go = () => { nxt.currentTime = 0; nxt.play().catch(()=>{}); nxt.classList.add('on'); cur.classList.remove('on');
-      const old = cur; cur = nxt; nxt = old; setTimeout(()=>old.pause(), 2800); };
-    if (nxt.readyState >= 3) go(); else nxt.addEventListener('canplaythrough', go, {once:true}); }
-  if (!reduce) P.setInterval(swap, 12000);
-  [A,B].forEach(v=>v.addEventListener('ended', ()=>{ v.currentTime = 0; v.play().catch(()=>{}); }));
-  D.addEventListener('visibilitychange', ()=>{ if (D.hidden) cur.pause(); else cur.play().catch(()=>{}); });
+  const play = v => { const p = v.play(); if (p && p.catch) p.catch(()=>{}); };
+  function preload(){ nxt.src = src((idx + 1) % CLIPS.length); nxt.load(); }
+  A.src = src(0);
+  A.addEventListener('playing', ()=>{ A.classList.add('on'); preload(); }, {once:true});
+  play(A);
+  function swap(force){
+    if (busy || D.hidden) return;
+    if (nxt.readyState < 3 && !force) return;          // not buffered yet → keep the current clip looping, try next tick
+    busy = true;
+    const incoming = nxt, outgoing = cur;
+    incoming.currentTime = 0; play(incoming);
+    incoming.classList.add('on'); outgoing.classList.remove('on');
+    cur = incoming; nxt = outgoing; idx = (idx + 1) % CLIPS.length; lastT = -1; stuck = 0;
+    setTimeout(()=>{ outgoing.pause(); preload(); busy = false; }, 2800);   // after the crossfade, queue the following clip
+  }
+  [A,B].forEach(v=>v.addEventListener('error', ()=>{ if (v === nxt && !busy) { idx = (idx + 1) % CLIPS.length; preload(); } }));
+  if (!reduce) P.setInterval(()=>swap(false), 13000);
+  P.setInterval(()=>{                                     // watchdog
+    if (D.hidden) return;
+    if (cur.paused) play(cur);
+    if (Math.abs(cur.currentTime - lastT) < 0.01) { if (++stuck >= 4 && nxt.readyState >= 2) swap(true); } else stuck = 0;
+    lastT = cur.currentTime;
+    if (!cur.classList.contains('on') && !busy) cur.classList.add('on');
+  }, 2000);
+  D.addEventListener('visibilitychange', ()=>{ if (D.hidden) { cur.pause(); } else { play(cur); } });
+  ['pointerdown','touchstart','keydown'].forEach(ev=>D.addEventListener(ev, ()=>{ if (cur.paused) play(cur); }, {passive:true}));
   D.body.prepend(grain); D.body.prepend(veil); D.body.prepend(vwrap);
 
   /* 2 ── sunlit dust motes (Three.js): soft bokeh drifting through the light ── */
@@ -408,7 +510,8 @@ FX_JS = r"""
       const k=Math.max(0,Math.min(1,(H*.85-r.top)/(r.height+H*.35))); const n=Math.round(k*ws.length*1.1);
       ws.forEach((w,i)=>w.classList.toggle('lit', i<n)); });
     D.querySelectorAll('video[autoplay]:not([data-agro])').forEach(v=>{ v.dataset.agro=1; v.muted=true; v.defaultMuted=true; v.playsInline=true;
-      const go=()=>v.play().catch(()=>{}); if(v.readyState>=2) go(); else v.addEventListener('canplay',go,{once:true}); }); }
+      const go=()=>v.play().catch(()=>{}); if(v.readyState>=2) go(); else v.addEventListener('canplay',go,{once:true}); });
+    if (!D.hidden) D.querySelectorAll('video[autoplay][data-agro]').forEach(v=>{ if (v.paused && v.readyState>=2) v.play().catch(()=>{}); }); }
   let q=false; D.addEventListener('scroll',()=>{ if(q) return; q=true; P.requestAnimationFrame(()=>{ q=false; scan(); }); },{capture:true,passive:true});
   P.setInterval(scan, 350);
   P.__agronovaFX.refresh = scan;
@@ -444,11 +547,11 @@ def hero() -> None:
     <div class="side">
       <p>AgroNova is a thinking farm assistant. It checks live weather, real soil maps and your pinned field, then answers in your
       language with clear steps and the reason behind each one.</p>
-      <span class="cta">Scroll to explore <span>↓</span></span>
+      <a class="cta" href="#ask">Ask AgroNova <span>↓</span></a>
     </div>
   </div>
   <div class="foot">
-    <div><b>758</b><span>Districts mapped</span></div><div><b>16</b><span>Languages</span></div>
+    <div><b>758</b><span>Districts mapped</span></div><div><b>37</b><span>Languages · all 22 Indian</span></div>
     <div><b>06</b><span>Expert modules</span></div><div><b>Live</b><span>Weather · soil · web search</span></div>
   </div>
 </section>""")

@@ -1,0 +1,211 @@
+{
+ "generated": "2026-11-21",
+ "model": "openai/gpt-oss-120b",
+ "judge_model": "openai/gpt-oss-20b",
+ "validation": [
+  {
+   "region": "Rajasthan, India",
+   "prompt": "What to grow in Rajasthan in August with very little water?",
+   "answer": "**Grow pearl millet (bajra) + moth bean (guar) as a rain‑fed Kharif intercrop.**  \n\n- **Why:** Both are ultra‑drought‑tolerant millets/pulses that thrive on the residual monsoon moisture of August in Rajasthan’s arid, sandy soils. They need ≤ 350 mm total rain, can survive long dry spells, and give good grain (bajra) and fodder (moth bean) returns.  \n\n### 1️⃣ Crop choices & timing (August sowing)  \n| Crop | Typical sowing window | Seed rate | Spacing | Expected yield (rain‑fed) |\n|------|----------------------|-----------|---------|---------------------------|\n| **Pearl millet (bajra)** | Early‑mid Aug (when soil moisture ≥ 8 % at 15 cm) | 8–10 kg / ha (≈ 3–4 kg / acre) | 30 cm × 15 cm | **1.2–1.8 t / ha** |\n| **Moth bean (guar)** – intercrop | Same as bajra, planted simultaneously | 6–8 kg / ha (≈ 2.5 kg / acre) | 30 cm × 10 cm | **0.6–0.9 t / ha** (grain) + good green fodder |\n\n*Both can be harvested together (bajra ≈ Oct‑Nov, moth bean ≈ Nov).*\n\n### 2️⃣ Soil & preparation  \n- **Soil:** Sandy‑loam to loamy sand, pH 6.0‑7.5.  \n- **Land prep:** Light tillage, create a fine seed‑bed; avoid deep ploughing to retain moisture.  \n- **Seed treatment:** Treat seeds with a seed‑coating of **Trichoderma** or **Karate (carbofuran) 0.05 % EC** for early seed‑ling protection if allowed; otherwise use **bio‑fungicide** (e.g., *Bacillus subtilis*).\n\n### 3️⃣ Water & irrigation  \n- Rely on **rain‑fed** moisture; if supplemental irrigation is possible, give **1 × 20 mm** pulse at **30 days after sowing (DAS)** to aid tillering.  \n- No further irrigation needed unless a severe drought (> 30 days without rain) occurs.\n\n### 4️⃣ Fertiliser (rain‑fed recommendation)  \n| Nutrient | Dose (per ha) | Timing |\n|----------|---------------|--------|\n| N (Urea) | 30 kg | At sowing (split: 15 kg + 15 kg at 30 DAS) |\n| P₂O₅ (DAP) | 40 kg | At sowing |\n| K₂O (MOP) | 20 kg | At sowing |\n| Micronutrients (ZnSO₄) | 5 kg | At sowing (optional) |\n\n### 5️⃣ Weed & pest management (IPM)  \n- **Weeds:** Hand‑weeding at 20 DAS and 45 DAS; mulching with straw reduces water loss.  \n- **Pests:** Monitor for **shoot fly** and **pod borer**; use **Neem seed oil spray (2 % EC)** at first sign, repeat 7‑day interval up to 3 sprays.  \n- **Diseases:** Spot blotch can appear; apply **Copper oxychloride 0.2 %** as a foliar spray if > 10 % leaf area shows symptoms.\n\n### 6️⃣ Harvest & post‑harvest  \n- **Bajra:** Cut when grains are hard and moisture ≤ 13 %. Thresh and dry in shade; store in airtight bags.  \n- **Moth bean:** Harvest green pods for fodder or let dry for grain; dry to ≤ 12 % moisture before storage.\n\n### 7️⃣ Economic note (2026 market)  \n- **Bajra price (Agmarknet, 19 Nov 2026):** ₹2,200 / quintal.  \n- **Moth bean price:** ₹2,800 / quintal.  \n- Expected gross return ≈ **₹2.5 L / ha** (bajra + moth bean) with minimal input cost.\n\n---\n\n**Next step:** Contact your nearest Rajasthan KVK (e.g., *Madhav Institute of Technology & Science, Udaipur*) for the latest **drought‑tolerant varieties** (e.g., ‘RHB‑150’ bajra, ‘MGB‑102’ moth bean) and any state‑specific seed subsidy schemes.  \n\n*Ready to plan a 7‑day irrigation & spray calendar?* 🌱",
+   "keyword_match_%": 57,
+   "matched": "bajra, pearl millet, guar, moth",
+   "words/sentence": 7.2,
+   "tools": "get_crop_calendar",
+   "latency_s": 4.67,
+   "region_score": 5,
+   "reasoning": 5,
+   "simple": 4,
+   "balanced": 5,
+   "safe": 5,
+   "hallucination_risk": "low",
+   "fix": "Verify pesticide and fertilizer recommendations with local regulations and current market prices."
+  },
+  {
+   "region": "Tamil Nadu, India",
+   "prompt": "Suggest crops to plant in July in Tamil Nadu.",
+   "answer": "\n\n⏳ Rate limit reached on the free tier. Wait a minute, or pick a smaller model in the sidebar.",
+   "keyword_match_%": 0,
+   "matched": "",
+   "words/sentence": 6.0,
+   "tools": "get_crop_calendar",
+   "latency_s": 24.7,
+   "region_score": 1,
+   "reasoning": 1,
+   "simple": 1,
+   "balanced": 1,
+   "safe": 1,
+   "hallucination_risk": "low",
+   "fix": "Provide a concise list of suitable crops for July in Tamil Nadu, including climate suitability and planting guidelines."
+  },
+  {
+   "region": "Haryana, India",
+   "prompt": "White powdery fungus on wheat leaves in Haryana — treatment?",
+   "answer": "\n\n⏳ Rate limit reached on the free tier. Wait a minute, or pick a smaller model in the sidebar.",
+   "keyword_match_%": 0,
+   "matched": "",
+   "words/sentence": 6.0,
+   "tools": "web_search, web_open, get_weather_forecast",
+   "latency_s": 47.45,
+   "region_score": 1,
+   "reasoning": 1,
+   "simple": 1,
+   "balanced": 1,
+   "safe": 1,
+   "hallucination_risk": "low",
+   "fix": "Provide a clear, specific question and request a detailed, actionable response."
+  },
+  {
+   "region": "Kumasi, Ghana",
+   "prompt": "When should I plant maize in Kumasi, Ghana and how do I control fall armyworm organically?",
+   "answer": "\n\n⏳ Rate limit reached on the free tier. Wait a minute, or pick a smaller model in the sidebar.",
+   "keyword_match_%": 0,
+   "matched": "",
+   "words/sentence": 6.0,
+   "tools": "geocode_place, get_crop_calendar",
+   "latency_s": 70.3,
+   "region_score": 1,
+   "reasoning": 1,
+   "simple": 1,
+   "balanced": 1,
+   "safe": 1,
+   "hallucination_risk": "low",
+   "fix": "Provide a concise, region‑specific planting schedule and organic control methods for fall armyworm."
+  },
+  {
+   "region": "Saskatchewan, Canada",
+   "prompt": "Frost risk and harvest advice for canola in Saskatchewan this week?",
+   "answer": "\n\n⏳ Rate limit reached on the free tier. Wait a minute, or pick a smaller model in the sidebar.",
+   "keyword_match_%": 0,
+   "matched": "",
+   "words/sentence": 6.0,
+   "tools": "geocode_place",
+   "latency_s": 57.14,
+   "region_score": 1,
+   "reasoning": 1,
+   "simple": 1,
+   "balanced": 1,
+   "safe": 1,
+   "hallucination_risk": "low",
+   "fix": "Provide a concise, region‑specific frost risk assessment and harvest advice for canola in Saskatchewan."
+  },
+  {
+   "region": "Nakuru, Kenya",
+   "prompt": "What should I grow in slightly acidic soil in Nakuru, Kenya?",
+   "answer": "**Grow a short‑rain‑season maize ↔ bean rotation with a cash vegetable (e.g., tomatoes) on your slightly acidic Nakuru soils.**  \n\n- **Maize (short‑season hybrid, 90‑100 d)** – tolerates pH 5.5‑6.5, matches the **Oct‑Dec short rains**.  \n  *Why:* Good grain market in Nakuru; moderate water demand (≈ 450 mm) fits the expected rainfall.  \n\n- **Common beans (Bush or climbing, 60‑70 d)** – thrives in the same pH range and fixes N, improving soil for the next maize.  \n  *Why:* High protein cash crop; low fertilizer cost; fits a **double‑crop** after early‑planted maize.  \n\n- **Tomatoes (indeterminate, 90‑120 d)** – slightly acidic soils boost nutrient uptake; can be irrigated if rain falls short.  \n  *Why:* High‑value market (local markets, hotels); fits the same planting window and can be inter‑cropped between maize rows.  \n\n**Key management points**\n\n| Crop | Sowing window (2026) | Seed rate (kg ha⁻¹) | Recommended fertilizer* | Water need* |\n|------|----------------------|--------------------|--------------------------|------------|\n| Maize (short‑season) | 15‑20 Nov (first short‑rain) | 20‑22 | N 120 kg ha⁻¹ (Urea) + P 40 kg ha⁻¹ (SSP) | 450 mm total, irrigate if < 300 mm |\n| Beans | 5‑10 Dec (after maize emergence) | 8‑10 | N 0 (N‑fixing) + P 30 kg ha⁻¹ | 350 mm total, supplemental drip if needed |\n| Tomatoes | 20‑25 Nov (early rain) | 3‑4 kg (transplants) | N 80 kg ha⁻¹ + P 30 kg ha⁻¹ + K 60 kg ha⁻¹ | 500 mm total, drip irrigation preferred |\n\n\\*Based on **Kenya’s short‑rain season recommendations (AgroNova crop‑calendar, Nov 2026)** and typical pH 5.5‑6.5 response.\n\n### Soil tip\n- If soil pH is below **5.5**, apply **lime at 1 t ha⁻¹** (2‑3 t ha⁻¹ if pH ≈ 5.0) and re‑test after 2 weeks.  \n- Incorporate **organic matter** (farmyard manure 5‑10 t ha⁻¹) to improve structure and nutrient retention.\n\n### Pest & disease quick notes\n- **Maize:** watch for *maize streak virus* and armyworm; use resistant hybrids and early‑season scouting.  \n- **Beans:** monitor for *bean fly*; plant trap crops (e.g., sorghum) and apply neem‑based seed treatment.  \n- **Tomatoes:** practice **crop rotation** and use **copper‑based fungicide** only if early blight appears; prefer mulching to reduce splash.\n\n### Next step\n- **Get a 7‑day weather forecast** for Nakuru (next 7 days) to fine‑tune exact sowing dates and irrigation scheduling.  \n\nFeel free to ask for a detailed fertilizer schedule or a drip‑irrigation layout!",
+   "keyword_match_%": 60,
+   "matched": "lime, beans, ph",
+   "words/sentence": 8.7,
+   "tools": "geocode_place, get_soil_properties, get_crop_calendar",
+   "latency_s": 70.86,
+   "region_score": 5,
+   "reasoning": 5,
+   "simple": 4,
+   "balanced": 3,
+   "safe": 5,
+   "hallucination_risk": "low",
+   "fix": "Add a brief note that local extension services should confirm the specific crop mix and input rates for the farmer’s exact plot conditions."
+  }
+ ],
+ "modules": {
+  "crop": {
+   "prompt": "Suggest crops to plant in July in Tamil Nadu.",
+   "answer": "\n\n⏳ Rate limit reached on the free tier. Wait a minute, or pick a smaller model in the sidebar.",
+   "tools": [
+    "get_crop_calendar"
+   ],
+   "seconds": 30.32
+  },
+  "pest": {
+   "prompt": "White fungus on wheat leaves in Haryana — treatment?",
+   "answer": "\n\n⏳ Rate limit reached on the free tier. Wait a minute, or pick a smaller model in the sidebar.",
+   "tools": [],
+   "seconds": 42.49
+  },
+  "weather": {
+   "prompt": "Rain prediction and farming advice for Punjab this week?",
+   "answer": "\n\n⏳ Rate limit reached on the free tier. Wait a minute, or pick a smaller model in the sidebar.",
+   "tools": [
+    "geocode_place"
+   ],
+   "seconds": 35.53
+  },
+  "soil": {
+   "prompt": "What should I grow in slightly acidic soil in Kenya?",
+   "answer": "**Grow maize, beans or tomatoes – they all thrive in Kenya’s slightly acidic soils (pH 5.5‑6.5).**  \n\n**Why these crops?**  \n| Crop | Optimal pH (from KALRO‑IFDC table) | Main season in Kenya* | Market demand | Typical yield (per ha) |\n|------|----------------------------------------------|-----------------------|---------------|------------------------|\n| **Maize** | 5.5‑7.0 | Long rains (Mar‑May sow, Dec‑Jan harvest) / Short rains (Oct‑Dec sow, Jun‑Jul harvest) | Staple food, feed, cash | 4‑6 t |\n| **Beans (bush)** | 6.0‑6.5 | Same windows as maize (often inter‑cropped) | High‑protein legume, good price | 0.8‑1.2 t |\n| **Tomatoes** | 5.5‑7.0 | Warm months (Feb‑May & Sep‑Nov) | Fresh market, processing | 30‑45 t (intensive) |\n\n\\*Seasonal windows are from the FAO Crop Calendar for Kenya (accessed Nov 2026).\n\n### Quick steps to get started  \n\n1. **Confirm soil pH** – take a simple field test or send a sample to a local lab.  \n2. **Adjust if needed** – if pH < 5.8 for beans or tomatoes, apply **lime** (≈ 2 t ha⁻¹ for a 0.2‑unit raise; see IFDC liming formula Y = 16.988‑2.722X).  \n3. **Choose varieties** –  \n   * Maize: DKL‑2 or SC 403 (drought‑tolerant, good for both rains).  \n   * Beans: Rosecoco or MAC 13 (early‑maturing, disease‑resistant).  \n   * Tomatoes: Roma VF or local “Kisii” hybrid (high yield, good shelf‑life).  \n4. **Plan sowing dates** – use the windows above; aim to plant 2‑3 weeks before the first reliable rain.  \n5. **Fertiliser basics** (based on soil test):  \n   * Maize: 120 kg N ha⁻¹ (urea) + 60 kg P₂O₅ ha⁻¹ (DAP) + 40 kg K₂O ha⁻¹ (MOP).  \n   * Beans: 20 kg N ha⁻¹ (as nitrate) + 40 kg P₂O₅ ha⁻¹ + 20 kg K₂O ha⁻¹.  \n   * Tomatoes: 100 kg N ha⁻¹ + 60 kg P₂O₅ ha⁻¹ + 40 kg K₂O ha⁻¹, plus a starter of 10 kg N ha⁻¹ at planting.  \n6. **Integrated pest management** – scout weekly; use neem seed oil or Bacillus‑based biopesticides before resorting to chemicals.  \n7. **Watering** – aim for **30‑40 mm** of water per week during critical growth stages (use a simple rain gauge to track).  \n\n**⚠️ Safety** – always wear gloves, mask and eye protection when handling lime or fertilizers; follow label PHI (pre‑harvest interval) for any pesticide you may need.\n\n**Next step:** Send a soil sample for pH and nutrient analysis, then let me know the result – I can give the exact lime rate and a 7‑day planting‑irrigation schedule.",
+   "tools": [
+    "web_search",
+    "web_open",
+    "web_search",
+    "web_open",
+    "web_search",
+    "web_open",
+    "web_open",
+    "web_search",
+    "web_open",
+    "web_search",
+    "web_open"
+   ],
+   "seconds": 38.85
+  },
+  "sustain": {
+   "prompt": "Give eco-friendly pest control methods for grapes in Italy.",
+   "answer": "\n\n⏳ Rate limit reached on the free tier. Wait a minute, or pick a smaller model in the sidebar.",
+   "tools": [],
+   "seconds": 28.43
+  },
+  "market": {
+   "prompt": "What is the onion price at Lasalgaon mandi this week?",
+   "answer": "**Average red‑onion price at Lasalgaon APMC this week (15‑21 Nov 2026) ≈ ₹4,676 per quintal**  \n\n- **Recent quotations**  \n  - 18 Nov 2026 (Red): Min ₹1,311 – Max ₹5,700 – Avg ₹4,700 /quintal  \n  - 17 Nov 2026 (Red): Min ₹1,100 – Max ₹5,555 – Avg ₹4,651 /quintal  \n- **Weekly average** = (4,700 + 4,651) / 2 ≈ **₹4,676 /quintal**.  \n\n**Why the price is at this level**  \n- Rabi‑season onions are in full supply, but demand spikes for fresh‑market red onions keep prices above the off‑season low.  \n- Transport costs and limited cold‑storage in Nashik district add a premium of ~₹200–₹300 /quintal.  \n\n**What to do next**  \n- If you’re a buyer, lock in the current price now; prices often rise after the first week of December.  \n- Sellers can consider direct sales to local retailers to capture the higher retail margin (≈ ₹600 – ₹800 more than wholesale).  \n\n*Need a 7‑day price‑trend chart or advice on storage & marketing? Just let me know!*",
+   "tools": [
+    "web_search",
+    "web_open",
+    "web_open",
+    "code"
+   ],
+   "seconds": 28.46
+  }
+ },
+ "ab": {
+  "q": "What to grow in Rajasthan in August?",
+  "a": [
+   "\n\n⏳ Rate limit reached on the free tier. Wait a minute, or pick a smaller model in the sidebar.",
+   {
+    "input": 0,
+    "output": 0,
+    "thoughts": 0,
+    "tool_calls": 0,
+    "seconds": 0.33,
+    "tools": []
+   },
+   {
+    "region": 1,
+    "reasoning": 1,
+    "simple": 1,
+    "balanced": 1,
+    "safe": 5,
+    "hallucination_risk": "low",
+    "fix": "Provide a concise, region-specific answer with crop recommendations for August in Rajasthan, including climate considerations and planting guidelines."
+   }
+  ],
+  "b": [
+   "\n\n⏳ Rate limit reached on the free tier. Wait a minute, or pick a smaller model in the sidebar.",
+   {
+    "input": 0,
+    "output": 0,
+    "thoughts": 0,
+    "tool_calls": 0,
+    "seconds": 0.21,
+    "tools": []
+   },
+   {
+    "region": 1,
+    "reasoning": 1,
+    "simple": 1,
+    "balanced": 1,
+    "safe": 5,
+    "hallucination_risk": "low",
+    "fix": "Provide a concise, region-specific answer with crop recommendations for August in Rajasthan, including climate considerations and planting guidelines."
+   }
+  ]
+ }
+}

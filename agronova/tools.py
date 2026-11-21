@@ -57,7 +57,8 @@ def fetch_forecast(lat: float, lon: float, days: int = 7) -> dict:
         "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,"
                  "precipitation_probability_max,et0_fao_evapotranspiration,wind_speed_10m_max,uv_index_max,"
                  "sunshine_duration",
-        "hourly": "soil_moisture_0_to_1cm,soil_moisture_3_to_9cm,soil_temperature_6cm,relative_humidity_2m",
+        "hourly": "soil_moisture_0_to_1cm,soil_moisture_3_to_9cm,soil_temperature_6cm,relative_humidity_2m,temperature_2m,"
+                  "precipitation_probability,leaf_wetness_probability",
     }
     r = requests.get("https://api.open-meteo.com/v1/forecast", params=params, timeout=TIMEOUT, headers=UA)
     r.raise_for_status()
@@ -198,6 +199,29 @@ def tool_crop_calendar(region: str = "", month: str = "", **_) -> dict:
             res["regional_notes"] = STATE_NOTES[hit_state]
     res["advice"] = "Combine with live weather + soil tools and confirm varieties with local KVK / extension office."
     return res
+
+
+HUBS = [("Ludhiana", "Punjab", 30.90, 75.85), ("Nashik", "Maharashtra", 19.99, 73.79), ("Thanjavur", "Tamil Nadu", 10.79, 79.14),
+        ("Jodhpur", "Rajasthan", 26.24, 73.02), ("Guntur", "Andhra Pradesh", 16.31, 80.44), ("Jorhat", "Assam", 26.75, 94.20)]
+
+
+def hubs_now() -> list[dict]:
+    """Live current conditions + today's outlook for major Indian farming hubs (one batched Open-Meteo call)."""
+    r = requests.get("https://api.open-meteo.com/v1/forecast", timeout=TIMEOUT, headers=UA, params={
+        "latitude": ",".join(str(h[2]) for h in HUBS), "longitude": ",".join(str(h[3]) for h in HUBS), "timezone": "auto",
+        "current": "temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code",
+        "daily": "precipitation_probability_max,precipitation_sum,temperature_2m_max,temperature_2m_min", "forecast_days": 1})
+    r.raise_for_status()
+    data = r.json()
+    data = data if isinstance(data, list) else [data]
+    out = []
+    for (name, st_, lat, lon), d in zip(HUBS, data):
+        c, dd = d["current"], d["daily"]
+        out.append({"name": name, "state": st_, "temp": c["temperature_2m"], "rh": c["relative_humidity_2m"],
+                    "wind": c["wind_speed_10m"], "sky": describe_code(c["weather_code"])[0],
+                    "rain_prob": dd["precipitation_probability_max"][0] or 0, "rain": dd["precipitation_sum"][0] or 0,
+                    "tmax": dd["temperature_2m_max"][0], "tmin": dd["temperature_2m_min"][0]})
+    return out
 
 
 def tool_geocode(query: str, **_) -> dict:

@@ -48,10 +48,16 @@ def client_or_warn():
     return _client(key)
 
 
-LANG_CODES = {"English": "en-IN", "Hindi": "hi-IN", "Marathi": "mr-IN", "Tamil": "ta-IN", "Telugu": "te-IN",
-              "Kannada": "kn-IN", "Bengali": "bn-IN", "Punjabi": "pa-IN", "Gujarati": "gu-IN", "Malayalam": "ml-IN",
-              "Odia": "or-IN", "Kiswahili": "sw-KE", "Français": "fr-FR", "Português": "pt-BR", "Español": "es-ES",
-              "Twi": "en-GH"}
+# Read-aloud voices (BCP-47). Order matters: more specific names first. Browsers fall back to a related voice if a
+# device lacks one (e.g. Devanagari languages → Hindi voice).
+LANG_CODES = {"Hinglish": "hi-IN", "Assamese": "as-IN", "Bengali": "bn-IN", "Bodo": "brx-IN", "Dogri": "doi-IN",
+              "Gujarati": "gu-IN", "Hindi": "hi-IN", "Kannada": "kn-IN", "Kashmiri": "ks-IN", "Konkani": "kok-IN",
+              "Maithili": "mai-IN", "Malayalam": "ml-IN", "Manipuri": "mni-IN", "Marathi": "mr-IN", "Nepali": "ne-NP",
+              "Odia": "or-IN", "Punjabi": "pa-IN", "Sanskrit": "sa-IN", "Santali": "sat-IN", "Sindhi": "sd-IN",
+              "Tamil": "ta-IN", "Telugu": "te-IN", "Urdu": "ur-IN", "Bhojpuri": "bho-IN", "Rajasthani": "raj-IN",
+              "Haryanvi": "bgc-IN", "Chhattisgarhi": "hne-IN", "Tulu": "tcy-IN", "Khasi": "kha-IN", "Mizo": "lus-IN",
+              "Kiswahili": "sw-KE", "Français": "fr-FR", "Português": "pt-BR", "Español": "es-ES", "Twi": "en-GH",
+              "English": "en-IN"}
 CITE = re.compile(r"【[^】]*】")
 
 
@@ -60,9 +66,41 @@ def clean_answer(text: str) -> str:
     return CITE.sub("", text)
 
 
-def lang_code() -> str:
+SCRIPTS = [((0x0900, 0x097F), "hi-IN"), ((0x0980, 0x09FF), "bn-IN"), ((0x0A00, 0x0A7F), "pa-IN"), ((0x0A80, 0x0AFF), "gu-IN"),
+           ((0x0B00, 0x0B7F), "or-IN"), ((0x0B80, 0x0BFF), "ta-IN"), ((0x0C00, 0x0C7F), "te-IN"), ((0x0C80, 0x0CFF), "kn-IN"),
+           ((0x0D00, 0x0D7F), "ml-IN"), ((0x0600, 0x06FF), "ur-IN"), ((0x1C50, 0x1C7F), "sat-IN"), ((0xABC0, 0xABFF), "mni-IN")]
+
+
+def lang_code(text: str = "") -> str:
+    """Voice for read-aloud: the chosen language, or (in Auto mode) detected from the answer's script."""
     lang = st.session_state.get("language", "English")
-    return next((v for k, v in LANG_CODES.items() if k in lang), "en-IN")
+    if not lang.startswith("Auto"):
+        return next((v for k, v in LANG_CODES.items() if k in lang), "en-IN")
+    counts = {}
+    for ch in text[:1500]:
+        o = ord(ch)
+        for (a, b), code in SCRIPTS:
+            if a <= o <= b:
+                counts[code] = counts.get(code, 0) + 1
+    if counts:
+        code = max(counts, key=counts.get)
+        if code == "hi-IN" and any(w in text for w in ("आहे", "नाही", "करा ", "मध्ये")):
+            return "mr-IN"          # Marathi shares the Devanagari script
+        if code == "hi-IN" and any(w in text for w in ("छ ", "गर्नु", "हुन्छ")):
+            return "ne-NP"          # Nepali
+        if code == "bn-IN" and any(ch in text for ch in "ৰৱ"):
+            return "as-IN"          # Assamese uses ৰ and ৱ, which Bengali doesn't
+        return code
+    low = text.lower()
+    if any(w in low for w in (" na ", " ya ", "mazao", "mvua")):
+        return "sw-KE"
+    if any(w in low for w in (" le ", " les ", " des ", " est ")):
+        return "fr-FR"
+    if any(w in low for w in (" para ", " não ", " você ")):
+        return "pt-BR"
+    if any(w in low for w in (" el ", " los ", " para ", " qué ")):
+        return "es-ES"
+    return "en-IN"
 
 
 def speak_button(text: str, key: str) -> None:
@@ -82,7 +120,7 @@ i{{width:7px;height:7px;border-radius:50%;background:#a59c8a}}button.on i{{backg
 <button id="b"><i></i><span>Listen</span></button>
 <script>
 const S=(window.parent&&window.parent.speechSynthesis)||window.speechSynthesis, U=(window.parent&&window.parent.SpeechSynthesisUtterance)||SpeechSynthesisUtterance;
-const b=document.getElementById('b'), t=b.querySelector('span'), text={payload}, lang="{lang_code()}";
+const b=document.getElementById('b'), t=b.querySelector('span'), text={payload}, lang="{lang_code(plain)}";
 function reset(){{b.classList.remove('on');t.textContent='Listen';}}
 b.onclick=()=>{{ if(S.speaking){{S.cancel();reset();return;}}
   const u=new U(text); u.lang=lang; u.rate=.97;
@@ -105,6 +143,11 @@ def sources_html(srcs: list[dict]) -> str:
 @st.cache_data(ttl=600, show_spinner=False)
 def forecast(lat: float, lon: float, days: int = 10) -> dict:
     return tools.fetch_forecast(lat, lon, days)
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def live_hubs() -> list[dict]:
+    return tools.hubs_now()
 
 
 def tool_chips(trace: list[dict]) -> str:
@@ -164,7 +207,45 @@ def render_stream(events, container) -> dict:
     text = clean_answer(text)
     answer_ph.markdown(text or "_No answer came back. Try again, or pick another model in the sidebar._")
     return {"role": "assistant", "content": text, "thoughts": thoughts, "tools": trace, "usage": usage,
-            "sources": sources, "model": state.settings().model, "id": uuid.uuid4().hex[:10]}
+            "sources": sources, "model": usage.get("model") or state.settings().model, "id": uuid.uuid4().hex[:10]}
+
+
+BASELINE_PATH = state.LOG_PATH.parent / "baseline.json"
+TOOL_LABELS = {"get_weather_forecast": "Checked live weather", "get_soil_properties": "Read soil profile",
+               "get_crop_calendar": "Consulted crop calendar", "geocode_place": "Located place", "web_search": "Searched the web",
+               "web_open": "Read a web page", "code": "Ran a calculation", "transcribe": "Transcribed voice", "vision": "Looked at photo"}
+
+
+@st.cache_data(show_spinner=False)
+def baseline() -> dict:
+    """A real, saved run of the AI (data/baseline.json) so pages show genuine results before anyone runs anything."""
+    try:
+        b = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    # Only ever show genuine answers: drop entries that were rate-limit/error messages or failed grading
+    def ok(t):
+        t = (t or "").strip()
+        return len(t) >= 300 and not t.startswith(("⏳", "⚠️", "🔑", "🧩", "🌩️"))
+    b["validation"] = [r for r in b.get("validation", []) if ok(r.get("answer")) and r.get("region_score") not in (None, 1)]
+    b["modules"] = {k: m for k, m in (b.get("modules") or {}).items() if ok(m.get("answer"))}
+    ab = b.get("ab")
+    if not ab or not ok(ab["a"][0]) or not ok(ab["b"][0]) or not ab["b"][2] or ab["b"][2].get("region") == 1:
+        b["ab"] = None
+    return b
+
+
+def baseline_label() -> str:
+    b = baseline()
+    return f"{b.get('model', '').split('/')[-1]} · {b.get('generated', '')}" if b else ""
+
+
+def track_page(name: str) -> None:
+    """Log one page view per page per session, so the Usage monitor reflects real activity."""
+    seen = st.session_state.setdefault("_pages_seen", set())
+    if name not in seen:
+        seen.add(name)
+        state.log("page_view", feature=name)
 
 
 def system_prompt(extra: str = "") -> str:
@@ -191,9 +272,66 @@ def footer():
 
 # ═════════════════════════════ HOME ═════════════════════════════
 def page_home():
+    track_page("home")
     theme.hero()
     theme.ticker(["Crop recommendation", "Pest & disease doctor", "Weather-smart alerts", "Soil & fertilizer",
-                  "Sustainable farming", "Sixteen languages", "Photo diagnosis", "Voice questions"])
+                  "Sustainable farming", "Live market prices", "Sixteen languages", "Photo diagnosis", "Voice questions"])
+
+    # ── Ask box: the fastest way in ──
+    st.html("<div id='ask'></div>")
+    with st.container(key="panel_ask"):
+        st.html("<div class='kicker'><b>→</b><span>Ask AgroNova</span></div>"
+                "<h2 class='h2' style='margin:.5rem 0 1rem'>What's happening <em>in your field</em> today?</h2>")
+        c1, c2 = st.columns([5, 1], vertical_alignment="bottom")
+        q = c1.text_input("Your question", placeholder="e.g. Yellow leaves on my tomato plants in Pune — what should I do?",
+                          label_visibility="collapsed", key="home_q")
+        if c2.button("Ask", type="primary", width="stretch", icon=":material/arrow_upward:") and q.strip():
+            st.session_state.queued = {"text": q.strip(), "attachments": []}
+            st.switch_page(PAGES["chat"])
+        sug = ["Best crop to sow this month in Punjab?", "Onion price at Lasalgaon today?", "Organic fix for whitefly on cotton?"]
+        sc = st.columns(3)
+        for i, s_ in enumerate(sug):
+            if sc[i].button(s_, key=f"hs{i}", width="stretch", icon=":material/north_east:"):
+                st.session_state.queued = {"text": s_, "attachments": []}
+                st.switch_page(PAGES["chat"])
+
+    # ── Live India farm pulse (real weather right now) ──
+    theme.section("00", "Live · India farm pulse", "Right now, <em>across the fields.</em>",
+                  "Live conditions at six major farming hubs, with today's rain chance and whether it's a good day to spray "
+                  "(rain chance under 30 %, wind under 15 km/h). Refreshed every 10 minutes from Open-Meteo.")
+    try:
+        hubs = live_hubs()
+    except Exception:
+        hubs = []
+    if hubs:
+        cards = "".join(
+            f"""<div class="hub"><div class="hn">{html.escape(h['name'])}</div><div class="hs">{html.escape(h['state'])}</div>
+            <div class="ht">{h['temp']:.0f}°<small> {h['tmin']:.0f}–{h['tmax']:.0f}°</small></div><div class="hk">{html.escape(h['sky'])}</div>
+            <div class="hm">Humidity {h['rh']:.0f}% · Wind {h['wind']:.0f} km/h<br>Rain today {h['rain_prob']:.0f}%</div>
+            <span class="tg {'leaf' if h['rain_prob'] < 30 and h['wind'] < 15 else 'clay'}">{'Good to spray' if h['rain_prob'] < 30 and h['wind'] < 15 else 'Hold spraying'}</span></div>"""
+            for h in hubs)
+        st.html(f"<div class='hubs reveal'>{cards}</div>")
+        st.caption(f"Live · updated {dt.datetime.now():%H:%M} · tap Farm Locator to get this for your own field")
+
+    # ── This month in the field ──
+    month = dt.date.today()
+    season = prompts.season_for(month)
+    sow_now = [n for n, v in tools.INDIA_SEASONS.items() if month.strftime("%b") in v["sow"] or
+               (n.startswith("Rabi") and month.month in (10, 11, 12)) or (n.startswith("Kharif") and month.month in (6, 7)) or
+               (n.startswith("Zaid") and month.month in (3, 4))]
+    harvest_now = [n for n, v in tools.INDIA_SEASONS.items() if (n.startswith("Kharif") and month.month in (9, 10, 11)) or
+                   (n.startswith("Rabi") and month.month in (2, 3, 4)) or (n.startswith("Zaid") and month.month in (5, 6))]
+    def crops(names):
+        return ", ".join(tools.INDIA_SEASONS[n]["crops"] for n in names) or "—"
+    st.html(f"""<div class="duo month reveal" style="margin:3.5rem 0 1rem">
+      <div><div class="kicker"><b>{month:%b}</b><span>This month in the field · India</span></div>
+        <h2 class="h2">It's <em>{season.split(' (')[0]}</em> season.</h2>
+        <p class="dek">{season}. Here's what farmers across India are doing in {month:%B}.</p></div>
+      <div class="steps">
+        <div><i>sow</i><p><b>Sowing now</b><span>{html.escape(crops(sow_now))}</span></p></div>
+        <div><i>reap</i><p><b>Harvesting now</b><span>{html.escape(crops(harvest_now))}</span></p></div>
+        <div><i>tip</i><p><b>This week's habit</b><span>Check the field planner before spraying: wind and rain decide whether a spray works or washes off.</span></p></div>
+      </div></div>""")
 
     theme.manifesto("Every answer starts with the field — the soil under it, the sky above it, "
                     "and the farmer standing in it. Nothing is guessed when it can be measured.",
@@ -228,7 +366,7 @@ def page_home():
     </div>""")
 
     st.html(f"""<div class="bignums reveal">
-      <div><b data-count="758">0</b><span>Districts on the map</span></div><div><b data-count="16">0</b><span>Answer languages</span></div>
+      <div><b data-count="758">0</b><span>Districts on the map</span></div><div><b data-count="37">0</b><span>Answer languages</span></div>
       <div><b data-count="7">0</b><span>Live AI tools</span></div><div><b data-count="3">0</b><span>Pilot countries</span></div></div>""")
 
     theme.section("03", "Built for real farms", "From Ludhiana <em>to Kumasi.</em>",
@@ -244,6 +382,7 @@ def page_home():
 
 # ═════════════════════════════ FARM LOCATOR ═════════════════════════════
 def page_map():
+    track_page("map")
     theme.page_header("02", "Farm Locator", "Pin your <em>exact</em> field.",
                       "Explore 758 districts, search any village, use GPS or tap a farming hub. Lock a spot and every answer "
                       "after that is tailored to it.", theme.IMG_ROWS, "Crop rows · Unsplash")
@@ -283,9 +422,242 @@ def page_map():
             with st.container(key="panel_wx_empty"):
                 st.markdown("#### Live farm weather")
                 st.html("<p class='h2' style='font-size:2rem;margin:.4rem 0'>Lock a spot on the map to see <em>its sky.</em></p>"
-                        "<p class='dek'>You'll get a 10-day forecast, a rain outlook and topsoil moisture for that exact point.</p>")
+                        "<p class='dek'>You'll get a 10-day forecast, a 7-day field planner (spray, irrigate, alerts), "
+                        "your real soil profile and the season calendar for that exact point.</p>")
+                if st.button("Try it with a demo farm near Nashik", type="primary", icon=":material/agriculture:"):
+                    prof.update(lat=20.2000, lon=73.8300, district="Nashik", state="Maharashtra", country="India",
+                                crop=prof.get("crop") or "Onion", farm_size=prof.get("farm_size") or "2 acres")
+                    state.log("location_locked", detail="demo:Dindori,Nashik")
+                    st.rerun()
         else:
             weather_dashboard(prof["lat"], prof["lon"])
+    if prof["lat"] is not None:
+        farm_snapshot(prof)
+
+
+# ───────── Farm snapshot: field planner, soil profile, season calendar, quick questions ─────────
+def soil_profile(lat: float, lon: float) -> dict:
+    """Cached soil lookup; failures (timeouts) are NOT cached, so the next view tries again."""
+    try:
+        return _soil_cached(round(lat, 4), round(lon, 4))
+    except RuntimeError as e:
+        return {"error": str(e)}
+
+
+@st.cache_data(ttl=6 * 3600, show_spinner=False)
+def _soil_cached(lat: float, lon: float) -> dict:
+    """Soil at the pin; if SoilGrids has no value there (towns, water), use the nearest farmland ~5 km away."""
+    r = tools.tool_soil(latitude=lat, longitude=lon)
+    if r.get("error"):
+        r = tools.tool_soil(latitude=lat, longitude=lon)      # one retry: SoilGrids is sometimes slow
+        if r.get("error"):
+            raise RuntimeError(r["error"])
+    if r.get("properties"):
+        return r
+    for dlat, dlon in [(0.05, 0), (0, 0.05), (-0.05, 0), (0, -0.05)]:
+        r2 = tools.tool_soil(latitude=lat + dlat, longitude=lon + dlon)
+        if r2.get("properties"):
+            r2["nearby"] = True
+            return r2
+    return r
+
+
+# name, pH low, pH high, seasons, ideal °C low, high, water need, prefers light soil  (ICAR/FAO agronomy summaries)
+CROPS = [("Onion", 6.0, 7.5, ["Rabi", "Kharif"], 13, 30, "medium", False),
+         ("Wheat", 6.0, 7.5, ["Rabi"], 10, 25, "medium", False),
+         ("Chickpea (gram)", 6.0, 8.0, ["Rabi"], 10, 30, "low", False),
+         ("Mustard", 6.0, 7.5, ["Rabi"], 10, 25, "low", False),
+         ("Tomato", 6.0, 7.0, ["Rabi", "Zaid", "Kharif"], 18, 30, "medium", False),
+         ("Grapes", 6.5, 8.0, ["perennial"], 15, 35, "medium", False),
+         ("Soybean", 6.0, 7.5, ["Kharif"], 20, 32, "medium", False),
+         ("Cotton", 6.0, 8.0, ["Kharif"], 21, 35, "medium", False),
+         ("Pearl millet (bajra)", 6.0, 8.0, ["Kharif"], 25, 35, "low", True),
+         ("Rice (paddy)", 5.0, 7.0, ["Kharif"], 20, 35, "high", False),
+         ("Sugarcane", 6.0, 7.5, ["perennial"], 20, 35, "high", False),
+         ("Groundnut", 6.0, 7.0, ["Kharif", "Zaid"], 22, 32, "low", True),
+         ("Watermelon", 6.0, 7.0, ["Zaid"], 22, 35, "medium", True),
+         ("Potato", 5.0, 6.5, ["Rabi"], 12, 24, "medium", True)]
+
+
+def _num(s) -> float | None:
+    try:
+        return float(str(s).split()[0])
+    except (ValueError, IndexError):
+        return None
+
+
+def field_plan(w: dict) -> list[dict]:
+    """Rule-based 7-day planner from the live forecast (transparent agronomy rules, no AI needed)."""
+    d = w["daily"]
+    out = []
+    for i, day in enumerate(d["time"][:7]):
+        tmax, tmin = d["temperature_2m_max"][i], d["temperature_2m_min"][i]
+        rain, prob = d["precipitation_sum"][i] or 0, d["precipitation_probability_max"][i] or 0
+        wind, et0 = d["wind_speed_10m_max"][i] or 0, d["et0_fao_evapotranspiration"][i] or 0
+        alerts = []
+        if tmax >= 38: alerts.append(("Heatwave", "clay"))
+        if tmin <= 4: alerts.append(("Frost risk", "sky"))
+        if rain >= 20: alerts.append(("Heavy rain", "sky"))
+        if wind >= 30: alerts.append(("Strong wind", "clay"))
+        spray = prob < 30 and wind < 15 and tmax < 35 and rain < 1
+        irrigate = rain < 2 and et0 >= 4
+        out.append({"date": pd.to_datetime(day), "sky": tools.describe_code(d["weather_code"][i])[0], "tmax": tmax, "tmin": tmin,
+                    "rain": rain, "prob": prob, "wind": wind, "et0": et0, "spray": spray, "irrigate": irrigate, "alerts": alerts})
+    return out
+
+
+def farm_snapshot(prof: dict):
+    try:
+        w = forecast(prof["lat"], prof["lon"], 10)
+    except Exception:
+        return
+    plan = field_plan(w)
+    theme.section("A", "Field planner", "Your next <em>seven days.</em>",
+                  "Built from the live forecast with simple, transparent rules: spray when rain chance &lt; 30 %, wind &lt; 15 km/h "
+                  "and it's below 35 °C; irrigate when rain &lt; 2 mm and evaporation ≥ 4 mm; flag heat, frost, heavy rain and wind.")
+    cards = []
+    for p in plan:
+        tags = "".join(f"<span class='tg {c}'>{t}</span>" for t, c in p["alerts"])
+        tags += "<span class='tg leaf'>Good to spray</span>" if p["spray"] else "<span class='tg dim'>Don't spray</span>"
+        tags += "<span class='tg gold'>Irrigate</span>" if p["irrigate"] else ""
+        cards.append(f"""<div class="day"><div class="dw">{p['date']:%a}</div><div class="dd">{p['date']:%d %b}</div>
+          <div class="dt">{p['tmax']:.0f}°<small>/{p['tmin']:.0f}°</small></div><div class="ds">{html.escape(p['sky'])}</div>
+          <div class="dm">Rain {p['rain']:.1f} mm · {p['prob']:.0f}%<br>Wind {p['wind']:.0f} km/h · ET₀ {p['et0']:.1f}</div>
+          <div class="tgs">{tags}</div></div>""")
+    st.html(f"<div class='week reveal'>{''.join(cards)}</div>")
+    spray_days = [f"{p['date']:%a}" for p in plan if p["spray"]]
+    irr_days = [f"{p['date']:%a}" for p in plan if p["irrigate"]]
+    st.caption(f"Best spray days: {', '.join(spray_days) or 'none this week'} · Irrigation needed: {', '.join(irr_days) or 'no'}")
+
+    left, right = st.columns([1, 1], gap="large")
+    with left:
+        with st.container(key="panel_soil"):
+            st.markdown("#### Soil under your farm")
+            soil = soil_profile(prof["lat"], prof["lon"])
+            props = soil.get("properties") or {}
+            if not props:
+                st.html("<p class='dek'>SoilGrids has no modelled value for this exact point (common for towns and water). "
+                        "Try pinning a nearby field.</p>")
+            else:
+                g = lambda k: _num((props.get(k) or {}).get("0-5cm"))
+                ph, clay, sand, silt, soc = g("pH (water)"), g("Clay"), g("Sand"), g("Silt"), g("Organic carbon")
+                ph_txt = ("strongly acidic — lime helps" if ph and ph < 5.5 else "slightly acidic" if ph and ph < 6.5 else
+                          "neutral — ideal for most crops" if ph and ph <= 7.5 else "alkaline — watch zinc/iron" if ph else "—")
+                tex = ("clayey — holds water, drains slowly" if (clay or 0) >= 35 else "sandy — drains fast, needs frequent water"
+                       if (sand or 0) >= 60 else "loamy — balanced")
+                m = st.columns(3)
+                m[0].metric("pH", f"{ph:.1f}" if ph else "—")
+                m[1].metric("Org. carbon g/kg", f"{soc:.0f}" if soc else "—")
+                m[2].metric("Clay %", f"{clay:.0f}" if clay else "—")
+                bars = "".join(f"<div style='flex:{v or 0.01};background:{c}' title='{n} {v:.0f}%'></div>"
+                               for n, v, c in [("Clay", clay or 0, "#d4693f"), ("Silt", silt or 0, "#e8b04a"), ("Sand", sand or 0, "#f2ead9")])
+                st.html(f"<div class='texture'>{bars}</div><div class='cap'><span>Clay · Silt · Sand</span><span>ISRIC SoilGrids, 0–5 cm</span></div>"
+                        f"<p class='dek' style='margin-top:.8rem'>Your topsoil is <b>{ph_txt}</b> and <b>{tex}</b>."
+                        + (" <i>(Measured at the nearest farmland, about 5 km from your pin.)</i>" if soil.get("nearby") else "") + "</p>")
+    with right:
+        with st.container(key="panel_season"):
+            st.markdown("#### Season calendar")
+            month = dt.date.today().month
+            seasons = [("Kharif", 6, 10, "#a9d46f"), ("Rabi", 10, 3, "#e8b04a"), ("Zaid", 3, 6, "#8fc3d6")]
+            rows = ""
+            for name, a, b, col in seasons:
+                cells = "".join(
+                    f"<i class='{'on' if (a <= mth <= b if a <= b else (mth >= a or mth <= b)) else ''}{' now' if mth == month else ''}' "
+                    f"style='--c:{col}'></i>" for mth in range(1, 13))
+                rows += f"<div class='srow'><b>{name}</b><div class='months'>{cells}</div></div>"
+            labels = "".join(f"<span{' class=now' if i + 1 == month else ''}>{m}</span>" for i, m in enumerate("JFMAMJJASOND"))
+            note = tools.STATE_NOTES.get(prof.get("state", ""), "Pin a farm in India to see regional crop notes.")
+            st.html(f"<div class='season'>{rows}<div class='srow'><b></b><div class='months lab'>{labels}</div></div></div>"
+                    f"<p class='dek' style='margin-top:1rem'><b>{html.escape(prof.get('state') or '')}</b> — {html.escape(note)}</p>"
+                    f"<p class='dek'>Now: <b>{prompts.season_for()}</b>.</p>")
+
+    # ── 48-hour outlook + fungal disease risk ──
+    h = w["hourly"]
+    hh = pd.DataFrame({"time": pd.to_datetime(h["time"]), "temp": h.get("temperature_2m"), "rh": h.get("relative_humidity_2m"),
+                       "rain": h.get("precipitation_probability"), "wet": h.get("leaf_wetness_probability")})
+    now = (pd.Timestamp.utcnow().tz_localize(None) + pd.Timedelta(seconds=w.get("utc_offset_seconds", 0))).floor("h")  # farm-local time
+    hh = hh[hh["time"] >= now - pd.Timedelta(hours=1)].head(48)
+    risky = hh[(hh["rh"] >= 85) & (hh["temp"].between(15, 30))]
+    hours = len(risky)
+    level, col, why = (("High", "clay", "long humid, mild spells — ideal for blight, mildew and leaf spot")
+                       if hours >= 10 else ("Moderate", "gold", "some humid hours — scout lower leaves")
+                       if hours >= 4 else ("Low", "leaf", "air stays too dry for most fungal spores to infect"))
+    theme.section("C", "Next 48 hours", "Disease risk, <em>hour by hour.</em>",
+                  "Fungal diseases need leaf wetness or humidity of at least 85 % at 15–30 °C for several hours. AgroNova counts those "
+                  "hours in the live hourly forecast. It's a standard rule of thumb, not a lab test.")
+    c1, c2 = st.columns([1, 2.2], gap="large")
+    with c1:
+        with st.container(key="panel_risk"):
+            st.markdown("#### Fungal disease risk")
+            st.html(f"<div class='risk {col}'><b>{level}</b><span>{hours} risky hours in the next 48</span></div>"
+                    f"<p class='dek' style='margin-top:.8rem'>{why.capitalize()}.</p>"
+                    + ("<p class='dek'>Plan a preventive spray (e.g. copper or mancozeb, label dose) in a dry window, and "
+                       "improve airflow.</p>" if level != "Low" else "<p class='dek'>No preventive fungicide needed right now. Keep scouting weekly.</p>"))
+    with c2:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=hh["time"], y=hh["rh"], name="Humidity %", line=dict(color=SKY, width=2, shape="spline"),
+                                 fill="tozeroy", fillcolor="rgba(143,195,214,.07)"))
+        fig.add_trace(go.Scatter(x=hh["time"], y=hh["temp"], name="Temp °C", yaxis="y2", line=dict(color=GOLD, width=2.5, shape="spline")))
+        if hh["rain"].notna().any():
+            fig.add_trace(go.Bar(x=hh["time"], y=hh["rain"], name="Rain chance %", marker_color="rgba(212,105,63,.35)"))
+        fig.add_hrect(y0=85, y1=100, fillcolor="rgba(212,105,63,.08)", line_width=0)
+        fig.update_layout(**PLOT_LAYOUT, height=300, title="Humidity, temperature & rain chance",
+                          yaxis2=dict(overlaying="y", side="right", showgrid=False), barmode="overlay")
+        fig.update_yaxes(range=[0, 100], selector=dict(anchor="x"))
+        st.plotly_chart(fig, width="stretch", config=NOBAR)
+
+    # ── Crop fit check (transparent rules) ──
+    soil = soil_profile(prof["lat"], prof["lon"])
+    props = soil.get("properties") or {}
+    ph = _num((props.get("pH (water)") or {}).get("0-5cm"))
+    clay = _num((props.get("Clay") or {}).get("0-5cm"))
+    d = w["daily"]
+    tmean = sum((a + b) / 2 for a, b in zip(d["temperature_2m_max"], d["temperature_2m_min"])) / len(d["time"])
+    season_now = prompts.season_for().split(" ")[0]
+    water_low = any(x in (prof.get("irrigation") or "").lower() for x in ("rain", "pond")) or "Low water" in (prof.get("prefs") or [])
+    theme.section("D", "Crop fit check", "What suits <em>this</em> soil, now?",
+                  f"Each crop is scored on four transparent factors: the current {season_now} season, your soil pH "
+                  f"({ph if ph else 'unknown'}), the 10-day mean temperature ({tmean:.0f} °C) and water needs"
+                  f"{' (rain-fed / low water)' if water_low else ''}. Ask AgroNova for varieties and a full plan.")
+    rows = []
+    def closeness(x, lo_, hi_, slack):
+        """1.0 at the centre of the ideal range, ~0.6 at its edges, falling to 0 `slack` units outside it."""
+        mid, half = (lo_ + hi_) / 2, max((hi_ - lo_) / 2, 0.01)
+        if lo_ <= x <= hi_:
+            return 1 - 0.4 * abs(x - mid) / half
+        return max(0.0, 0.6 * (1 - (lo_ - x if x < lo_ else x - hi_) / slack))
+
+    for name, lo, hi, seasons, tlo, thi, water, light in CROPS:
+        in_season = season_now in seasons
+        s_season = 40 if in_season else 30 if "perennial" in seasons else 6
+        s_ph = round(25 * closeness(ph, lo, hi, 1.5)) if ph else 15
+        s_t = round(20 * closeness(tmean, tlo, thi, 8))
+        s_w = {"low": 15, "medium": 11, "high": 6}[water] if not water_low else {"low": 15, "medium": 8, "high": 2}[water]
+        if light and clay and clay >= 40:
+            s_w = max(0, s_w - 6)
+        score = min(100, s_season + s_ph + s_t + s_w)
+        notes = [("in season" if in_season else "year-round crop" if "perennial" in seasons else f"best in {'/'.join(seasons)}"),
+                 (f"pH {lo}–{hi}" + (" ✓" if ph and lo <= ph <= hi else " ✗" if ph else " (soil pH unknown)")),
+                 (f"{tlo}–{thi} °C" + (" ✓" if tlo <= tmean <= thi else " ✗")), f"{water} water"]
+        if light and clay and clay >= 40:
+            notes.append("prefers lighter soil")
+        rows.append((score, name, notes))
+    rows.sort(reverse=True)
+    bars = "".join(
+        f"""<div class="fit"><b>{html.escape(n)}</b><div class="fbar"><i style="width:{sc}%;background:{'#a9d46f' if sc >= 75 else '#e8b04a' if sc >= 50 else '#d4693f'}"></i></div>
+        <span class="fs">{sc}</span><span class="fn">{html.escape(' · '.join(nt))}</span></div>""" for sc, n, nt in rows[:8])
+    st.html(f"<div class='fits reveal'>{bars}</div>")
+
+    st.html("<div class='kicker' style='margin:2.4rem 0 .8rem'><b>E</b><span>Ask AgroNova about this farm</span></div>")
+    qs = [f"What should I sow next on my farm in {prof.get('district') or 'my district'}?",
+          "Use my 7-day forecast to plan irrigation and spraying.",
+          "Read my soil profile and give a fertilizer plan for 1 acre.",
+          f"What are mandi prices for {prof.get('crop') or 'onion'} near me this week?"]
+    cols = st.columns(4)
+    for i, q in enumerate(qs):
+        if cols[i].button(q, key=f"farmq{i}", width="stretch", icon=":material/arrow_outward:"):
+            st.session_state.queued = {"text": q, "attachments": []}
+            st.switch_page(PAGES["chat"])
 
 
 def weather_dashboard(lat: float, lon: float):
@@ -333,6 +705,7 @@ QUICK = ["What should I sow this month on my farm?", "Will it rain this week? Pl
 
 
 def page_chat():
+    track_page("chat")
     msgs = st.session_state.messages
     top = st.columns([3, 1, 1], vertical_alignment="center")
     with top[0]:
@@ -431,7 +804,8 @@ def generate_reply():
         msg = render_stream(llm.stream_agent(client, system_prompt(), st.session_state.messages, state.settings()), st.container())
         if msg["content"] and msg["content"] != llm.REFUSAL:
             msg["followups"] = llm.suggest_followups(client, st.session_state.messages[-1]["content"], msg["content"],
-                                                     st.session_state.get("language", "English"))
+                                                     "the same language as the farmer's question" if st.session_state.get("language", "").startswith("Auto")
+                                                     else st.session_state.get("language", "English"))
     st.session_state.messages.append(msg)
     u = msg["usage"]
     state.log("chat", feature="chat", latency_s=u.get("seconds", ""), tokens_in=u.get("input", ""),
@@ -442,6 +816,7 @@ def generate_reply():
 
 # ═════════════════════════════ FEATURE STUDIO ═════════════════════════════
 def page_studio():
+    track_page("studio")
     theme.page_header("04", "Feature Studio", "Six modules, <em>one</em> careful prompt each.",
                       "Fill in a few details. AgroNova builds a structured prompt for your region, fetches live data and "
                       "returns a formatted plan with the reason for each step.", theme.IMG_SEEDLING, "Seedlings · Unsplash")
@@ -482,9 +857,18 @@ def page_studio():
             st.markdown("#### The plan")
             if choice == "weather" and prof["lat"] is not None and not ran:
                 weather_dashboard(prof["lat"], prof["lon"])
-            elif not ran and not st.session_state.get("last_studio"):
-                st.html("<p class='h2' style='font-size:2rem'>Your plan will <em>appear here.</em></p>"
-                        "<p class='dek'>It streams in live, with tables, steps and a short reason for each recommendation.</p>")
+            elif not ran and st.session_state.get("last_studio_feat") != choice:
+                ex = (baseline().get("modules") or {}).get(choice)
+                if ex:
+                    st.html(f"<span class='badge'>Example answer · saved live run · {baseline_label()}</span>"
+                            f"<p class='dek' style='margin:0 0 .8rem'>Farmer asked: <b>“{html.escape(ex['prompt'])}”</b></p>")
+                    if ex.get("tools"):
+                        st.html(tool_chips([{"label": TOOL_LABELS.get(t, t), "args": {}, "ms": 0} for t in dict.fromkeys(ex["tools"])]))
+                    st.markdown(ex["answer"])
+                    st.caption("Fill in your situation, or tap a storyboard prompt, to get a live plan for your own farm.")
+                else:
+                    st.html("<p class='h2' style='font-size:2rem'>Your plan will <em>appear here.</em></p>"
+                            "<p class='dek'>It streams in live, with tables, steps and a short reason for each recommendation.</p>")
         if ran:
             client = client_or_warn()
             if client:
@@ -506,7 +890,8 @@ def page_studio():
                 state.log("feature", feature=choice, latency_s=u.get("seconds", ""), tokens_in=u.get("input", ""),
                           tokens_out=u.get("output", ""), tool_calls=u.get("tool_calls", 0), detail=(sample or crop)[:120])
                 st.session_state.last_studio = (prompt, msg)
-        elif st.session_state.get("last_studio"):
+                st.session_state.last_studio_feat = choice
+        elif st.session_state.get("last_studio") and st.session_state.get("last_studio_feat") == choice:
             _, m = st.session_state.last_studio
             with out:
                 if m.get("tools"):
@@ -529,6 +914,7 @@ def _readability(text: str) -> float:
 
 
 def page_validation():
+    track_page("validation")
     theme.page_header("05", "Validation Lab", "Test it, score it, <em>improve it.</em>",
                       "Runs prompts from India, Ghana, Canada and Kenya and checks each answer for the expected agronomy. "
                       "A second model pass grades it on the feedback checklist, and an A/B test compares prompt versions.",
@@ -549,7 +935,7 @@ def page_validation():
                         ans, u = llm.run_to_text(client, sysp, case["prompt"], s)
                         st.write(f"{case['region']} — grading")
                         judge = llm.parse_json(llm.complete(client, prompts.JUDGE_PROMPT.format(q=case["prompt"], a=ans[:6000]),
-                                                            llm.Settings(model=s.model, temperature=0.0, max_tokens=600)))
+                                                            llm.Settings(model=llm.FAST_MODEL, temperature=0.0, max_tokens=800)))
                         hits = [k for k in case["expect"] if k.lower() in ans.lower()]
                         rows.append({"region": case["region"], "prompt": case["prompt"], "answer": ans,
                                      "keyword_match_%": round(100 * len(hits) / len(case["expect"])), "matched": ", ".join(hits),
@@ -561,8 +947,11 @@ def page_validation():
                         state.log("validation", feature="validation", latency_s=u.get("seconds"), detail=case["region"])
                     stat.update(label="Validation complete", state="complete", expanded=False)
                 st.session_state.validation = rows
-        if st.session_state.validation:
-            df = pd.DataFrame(st.session_state.validation)
+        rows_v = st.session_state.validation or baseline().get("validation") or []
+        if rows_v and not st.session_state.validation:
+            st.html(f"<span class='badge'>Showing the saved baseline run · {baseline_label()} · judged by gpt-oss-20b</span>")
+        if rows_v:
+            df = pd.DataFrame(rows_v)
             crit = ["region_score", "reasoning", "simple", "balanced", "safe"]
             m = st.columns(4)
             m[0].metric("Prompts tested", len(df))
@@ -579,7 +968,7 @@ def page_validation():
                                          angularaxis=dict(gridcolor=RULE, linecolor=RULE)), title="Checklist scores by region")
             st.plotly_chart(fig, width="stretch", config=NOBAR)
             st.dataframe(df.drop(columns=["answer"]), width="stretch", hide_index=True)
-            for r in st.session_state.validation:
+            for r in rows_v:
                 with st.expander(f"{r['region']} — {r['prompt']}"):
                     st.markdown(r["answer"])
                     st.caption(f"Judge suggestion: {r.get('fix') or '—'}")
@@ -600,11 +989,13 @@ def page_validation():
                     a_txt, a_u = llm.run_to_text(client, "", q, a_cfg)
                     b_txt, b_u = llm.run_to_text(client, prompts.SYSTEM_PROMPT + "\n\n" + prompts.farm_context({}, "English"), q, s)
                     js = [llm.parse_json(llm.complete(client, prompts.JUDGE_PROMPT.format(q=q, a=t[:6000]),
-                                                      llm.Settings(model=s.model, temperature=0, max_tokens=600))) for t in (a_txt, b_txt)]
+                                                      llm.Settings(model=llm.FAST_MODEL, temperature=0, max_tokens=800))) for t in (a_txt, b_txt)]
                 st.session_state.ab = {"q": q, "a": (a_txt, a_u, js[0]), "b": (b_txt, b_u, js[1])}
                 state.log("ab_test", feature="validation", detail=q[:100])
-        if st.session_state.get("ab"):
-            ab = st.session_state.ab
+        ab = st.session_state.get("ab") or baseline().get("ab")
+        if ab:
+            if not st.session_state.get("ab"):
+                st.html(f"<span class='badge'>Showing the saved baseline A/B run · {baseline_label()}</span>")
             crit = ["region", "reasoning", "simple", "balanced", "safe"]
             fig = go.Figure()
             for lab, key, col in [("A · naive", "a", CLAY), ("B · optimised", "b", GOLD)]:
@@ -637,9 +1028,18 @@ def page_validation():
 
 # ═════════════════════════════ USAGE MONITOR ═════════════════════════════
 def page_monitor():
+    track_page("monitor")
     theme.page_header("06", "Usage", "Who asks what, <em>and how well</em> it answers.",
                       "Every chat, module run, location lock, rating and validation is logged, so the team can follow the "
                       "pilot across devices.", theme.IMG_GRAIN, "Grain · Unsplash")
+    st.markdown("#### System status — checked live")
+    checks = system_status()
+    st.html("<div class='health'>" + "".join(
+        f"<div class='hc{'' if ok else ' bad'}'><b>{html.escape(name)}</b><span>{html.escape(info)}</span></div>"
+        for name, ok, info in checks) + "</div>")
+    if st.button("Re-check now", icon=":material/refresh:"):
+        system_status.clear()
+        st.rerun()
     try:
         df = pd.read_csv(state.LOG_PATH)
     except Exception:
@@ -648,6 +1048,8 @@ def page_monitor():
         st.html("<p class='h2' style='font-size:2rem'>Nothing logged <em>yet.</em></p><p class='dek'>Try the chat or a Feature Studio module, then come back.</p>")
         return
     df["ts"] = pd.to_datetime(df["ts"], errors="coerce")
+    st.markdown("#### Pilot activity")
+    pv = df[df["event"] == "page_view"]["feature"].value_counts()
     scope = st.segmented_control("Scope", ["All sessions", "This session"], default="All sessions", label_visibility="collapsed")
     if scope == "This session":
         df = df[df["session"] == st.session_state.sid]
@@ -668,9 +1070,13 @@ def page_monitor():
         fig.update_layout(**PLOT_LAYOUT, height=320, title="Activity over time")
         st.plotly_chart(fig, width="stretch", config=NOBAR)
     with c2:
-        feat = q["feature"].fillna("chat").value_counts()
-        fig = go.Figure(go.Pie(labels=feat.index, values=feat.values, hole=.72, marker=dict(colors=SERIES, line=dict(color="#0d0b08", width=3))))
-        fig.update_layout(**{k: v for k, v in PLOT_LAYOUT.items() if k not in ("xaxis", "yaxis")}, height=320, title="Module usage")
+        if len(q):
+            feat = q["feature"].fillna("chat").value_counts()
+            fig = go.Figure(go.Pie(labels=feat.index, values=feat.values, hole=.72, marker=dict(colors=SERIES, line=dict(color="#0d0b08", width=3))))
+            fig.update_layout(**{k: v for k, v in PLOT_LAYOUT.items() if k not in ("xaxis", "yaxis")}, height=320, title="Module usage")
+        else:
+            fig = go.Figure(go.Bar(x=pv.index, y=pv.values, marker=dict(color=SERIES[: len(pv)] or GOLD)))
+            fig.update_layout(**PLOT_LAYOUT, height=320, title="Page views")
         st.plotly_chart(fig, width="stretch", config=NOBAR)
     reg = df["region"].replace("", pd.NA).dropna().value_counts().head(10)
     if len(reg):
@@ -681,12 +1087,76 @@ def page_monitor():
     st.download_button("Export usage log", df.to_csv(index=False), "agronova_usage.csv", "text/csv", icon=":material/download:")
 
 
+@st.cache_data(ttl=120, show_spinner=False)
+def system_status() -> list[tuple[str, bool, str]]:
+    """Live health checks of every service the app depends on (cached 2 min)."""
+    import requests
+    out = []
+
+    def timed(name, fn):
+        t = time.time()
+        try:
+            info = fn()
+            out.append((name, True, f"{info} · {int((time.time() - t) * 1000)} ms"))
+        except Exception as e:
+            out.append((name, False, f"{type(e).__name__}"))
+
+    key = state.api_key()
+    if key:
+        timed("AI models (Groq)", lambda: f"{len(llm.list_models(llm.make_client(key)))} models online")
+    else:
+        out.append(("AI models (Groq)", False, "no key set on the server"))
+    timed("Weather · Open-Meteo", lambda: requests.get("https://api.open-meteo.com/v1/forecast", params={
+        "latitude": 20, "longitude": 73.8, "current": "temperature_2m"}, timeout=8).raise_for_status() or "forecast OK")
+    timed("Place search", lambda: f"{len(tools.geocode('Nashik', 'IN', 1))} match")
+    timed("Soil · ISRIC SoilGrids", lambda: requests.get("https://rest.isric.org/soilgrids/v2.0/properties/query", params={
+        "lon": 85.1, "lat": 20.9, "property": "phh2o", "depth": "0-5cm", "value": "mean"}, timeout=10).raise_for_status() or "soil OK")
+    b = baseline()
+    out.append(("Saved baseline run", bool(b), f"{len(b.get('validation', []))} tests · {b.get('generated', '—')}" if b else "missing"))
+    return out
+
+
 # ═════════════════════════════ STORYBOARD (FA-1) ═════════════════════════════
 def page_storyboard():
+    track_page("storyboard")
     theme.page_header("07", "FA-1 Storyboard", "From problem <em>to product.</em>",
                       "The problem research, personas, the five core features with their prompts, the LLM API settings and "
                       "the UI flow this app implements.", theme.HERO_POSTER, "Wheat at sunrise · Unsplash")
-    t1, t2, t3, t4 = st.tabs(["Problem & research", "Personas", "Features & prompts", "LLM API"])
+    t1, t2, t5, t3, t6, t4 = st.tabs(["Problem & research", "Personas", "User journey", "Features & prompts",
+                                      "Sample outputs", "LLM API"])
+    with t5:
+        st.html("""<div class="journey">
+          <div><i>STEP 1</i><b>Pin the farm</b><span>Tap the India map, search a village or use GPS. Lock it.</span></div>
+          <div><i>STEP 2</i><b>Describe the farm</b><span>Crop, stage, size, water source, preferences such as organic or low-cost.</span></div>
+          <div><i>STEP 3</i><b>Ask, any way</b><span>Type, send a leaf photo or record a voice note, in any of 16 languages.</span></div>
+          <div><i>STEP 4</i><b>AI fetches facts</b><span>Live weather, soil grids, crop calendar, web prices, exact calculations.</span></div>
+          <div><i>STEP 5</i><b>Act with reasons</b><span>A one-line answer, steps with a <i>why</i>, safety notes, Listen and follow-ups.</span></div>
+        </div>""")
+        st.markdown("#### Prompt anatomy — what makes a good farming prompt")
+        st.html("""<div class="anat">Recommend the 3–5 best crops to sow
+          <mark class="k1">in Jodhpur, Rajasthan in August</mark> for
+          <mark class="k2">a 2-acre rain-fed farm after a bajra crop</mark>,
+          <mark class="k3">with only two irrigations available and low cost preferred</mark>.
+          <mark class="k4">Answer as a table | Crop | Sow by | Water need | Why |, then 5 numbered field steps.</mark></div>
+          <div class="legend"><span style="--c:#e8b04a">Location + time</span><span style="--c:#a9d46f">Crop / farm context</span>
+          <span style="--c:#8fc3d6">Constraints</span><span style="--c:#f0a07c">Output format</span></div>""")
+        st.markdown("Each Feature Studio template fills these four slots automatically from the farm profile. The system "
+                    "prompt then adds the persona, honesty rules, tool use and safety. This structure is what reduces vague "
+                    "or made-up answers (FA-1 Step 3).")
+    with t6:
+        mods = baseline().get("modules") or {}
+        if not mods:
+            st.info("Run `python tools_build_baseline.py` to save sample outputs.")
+        else:
+            st.html(f"<span class='badge'>Real outputs · saved live run · {baseline_label()}</span>")
+            st.markdown("Formatted, reasoned answers for one storyboard prompt per feature (FA-2 Step 4).")
+            for k, ex in mods.items():
+                f = prompts.FEATURES.get(k, {})
+                with st.expander(f"{f.get('title', k)} — “{ex['prompt']}”", expanded=(k == "crop")):
+                    if ex.get("tools"):
+                        st.html(tool_chips([{"label": TOOL_LABELS.get(t, t), "args": {}, "ms": 0} for t in dict.fromkeys(ex["tools"])]))
+                    st.markdown(ex["answer"])
+                    st.caption(f"{ex.get('seconds', '?')} s end-to-end")
     with t1:
         st.markdown("""
 ### Problem statement

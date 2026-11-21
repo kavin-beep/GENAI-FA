@@ -51,7 +51,7 @@ with st.sidebar:
     with st.expander("Generation parameters", expanded=False):
         st.slider("Temperature", 0.0, 1.5, 0.6, 0.05, key="temperature",
                   help="Lower = focused & consistent; higher = more creative / varied.")
-        st.slider("Max output tokens", 256, 8192, 2048, 128, key="max_tokens",
+        st.slider("Max output tokens", 256, 4096, 1400, 64, key="max_tokens",
                   help="Upper limit on answer length (≈ 0.75 words per token).")
     lab = state.place_label()
     st.caption(f"FARM — {lab or 'not pinned'}")
