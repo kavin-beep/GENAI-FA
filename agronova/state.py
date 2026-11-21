@@ -54,7 +54,7 @@ def place_label(p: dict | None = None) -> str:
 
 def log(event: str, **kw) -> None:
     row = {f: "" for f in LOG_FIELDS}
-    row.update(ts=dt.datetime.now().isoformat(timespec="seconds"), session=st.session_state.get("sid", ""), event=event,
+    row.update(ts=dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).replace(tzinfo=None).isoformat(timespec="seconds"), session=st.session_state.get("sid", ""), event=event,
                region=place_label() or kw.pop("region", ""), model=st.session_state.get("model", ""),
                language=st.session_state.get("language", ""))
     row.update({k: v for k, v in kw.items() if k in row})

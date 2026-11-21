@@ -564,7 +564,7 @@ def inject() -> None:
 
 
 def hero() -> None:
-    today = dt.date.today()
+    today = dt.datetime.now(dt.timezone(dt.timedelta(hours=5, minutes=30))).date()   # IST, not server UTC
     st.html(f"""
 <section class="hero">
   <img class="poster" src="{HERO_POSTER}" alt="Wheat field at sunrise" />

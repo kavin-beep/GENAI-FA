@@ -187,7 +187,7 @@ GLOBAL_NOTES = {
 
 
 def tool_crop_calendar(region: str = "", month: str = "", **_) -> dict:
-    month = month or dt.date.today().strftime("%B")
+    month = month or now_ist().strftime("%B")
     hit_state = next((s for s in STATE_NOTES if s.lower() in region.lower()), None)
     hit_country = next((c for c in GLOBAL_NOTES if c.lower() in region.lower()), None)
     res: dict[str, Any] = {"region": region, "month": month, "source": "AgroNova crop-calendar KB (ICAR/FAO summaries)"}

@@ -70,7 +70,8 @@ make better, safer, more sustainable decisions.
 
 
 def season_for(date: dt.date | None = None) -> str:
-    m = (date or dt.date.today()).month
+    from .tools import now_ist
+    m = (date or now_ist().date()).month
     if m in (6, 7, 8, 9, 10):
         return "Kharif (monsoon) season"
     if m in (11, 12, 1, 2):

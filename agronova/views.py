@@ -349,10 +349,10 @@ def page_home():
             <span class="tg {'leaf' if h['rain_prob'] < 30 and h['wind'] < 15 else 'clay'}">{'Good to spray' if h['rain_prob'] < 30 and h['wind'] < 15 else 'Hold spraying'}</span></div>"""
             for h in hubs)
         st.html(f"<div class='hubs reveal'>{cards}</div>")
-        st.caption(f"Live · updated {dt.datetime.now():%H:%M} · tap Farm Locator to get this for your own field")
+        st.caption(f"Live · updated {tools.now_ist():%H:%M} IST · tap Farm Locator to get this for your own field")
 
     # ── This month in the field ──
-    month = dt.date.today()
+    month = tools.now_ist().date()
     season = prompts.season_for(month)
     sow_now = [n for n, v in tools.INDIA_SEASONS.items() if month.strftime("%b") in v["sow"] or
                (n.startswith("Rabi") and month.month in (10, 11, 12)) or (n.startswith("Kharif") and month.month in (6, 7)) or
@@ -595,7 +595,7 @@ def farm_snapshot(prof: dict):
     with right:
         with st.container(key="panel_season"):
             st.markdown("#### Season calendar")
-            month = dt.date.today().month
+            month = tools.now_ist().month
             seasons = [("Kharif", 6, 10, "#a9d46f"), ("Rabi", 10, 3, "#e8b04a"), ("Zaid", 3, 6, "#8fc3d6")]
             rows = ""
             for name, a, b, col in seasons:
@@ -755,7 +755,8 @@ def page_chat():
         st.rerun()
 
     if not msgs:
-        greeting = "Good morning" if dt.datetime.now().hour < 12 else "Good afternoon" if dt.datetime.now().hour < 17 else "Good evening"
+        hr = tools.now_ist().hour
+        greeting = "Good morning" if 4 <= hr < 12 else "Good afternoon" if 12 <= hr < 17 else "Good evening"
         st.html(f"""<div class="reveal" style="margin:4rem 0 1rem"><div class="kicker"><b>03</b><span>AgroNova AI</span></div>
           <h1 class="display">{greeting}. <em>What's growing?</em></h1>
           <p class="dek">Ask about sowing, pests, rain, soil or market prices. AgroNova checks live weather and soil data,
@@ -926,7 +927,7 @@ def page_studio():
                         w in sample for w in ["India", "Kenya", "Ghana", "Italy", "Canada"]) else "")
                 else:
                     prompt = f["template"].format(place=place or "not specified — ask or assume and state it",
-                                                  month=dt.date.today().strftime("%B"), stage=stage or "not specified",
+                                                  month=tools.now_ist().strftime("%B"), stage=stage or "not specified",
                                                   crop=crop or "not specified", prefs=", ".join(prefs) or "none",
                                                   size=size, water=water, extra=extra or "")
                 atts = [{"data": photo.getvalue(), "mime": photo.type}] if photo else []
