@@ -19,7 +19,7 @@
   <img src="https://img.shields.io/badge/CRS-Generative%20AI%20FA--1%20%2B%20FA--2-f2ead9?style=flat-square&labelColor=d4693f"/>
 </p>
 
-**🌐 Live app → https://genai-fa-kqthfygr5t4appvkkx546sz.streamlit.app/
+🌐 Live app → https://genai-fa-kqthfygr5t4appvkkx546sz.streamlit.app/
 </div>
 
 ---
