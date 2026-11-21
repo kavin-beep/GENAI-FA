@@ -13,6 +13,7 @@ The motion layer runs from a same-origin iframe and mounts once on the parent pa
 from __future__ import annotations
 
 import datetime as dt
+import json
 import html as _html
 
 import streamlit as st
@@ -154,6 +155,9 @@ button[data-testid="stBaseButton-primary"] *,button[data-testid="stBaseButton-pr
 @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .reveal{opacity:0;transform:translateY(28px);transition:opacity 1.2s var(--ease),transform 1.4s var(--ease)}
 .reveal.in{opacity:1;transform:none}
+/* Fail-safe: if the motion script is ever late or blocked, content still fades in on its own after ~2 s */
+.reveal:not(.in){animation:rvfb 1.1s 1.8s var(--ease) forwards}
+@keyframes rvfb{to{opacity:1;transform:none}}
 .tilt{will-change:transform;transition:transform .6s var(--ease)}
 .mask{display:block;overflow:hidden}
 .mask > span{display:inline-block;transform:translateY(105%);animation:maskup 1.4s var(--ease) forwards}
@@ -370,13 +374,12 @@ div.st-key-panel_ask [data-baseweb="input"] input{font-size:1.05rem!important}
 </style>
 """
 
-FX_JS = r"""
-<script>
+# Runs in the Streamlit page's own window (injected once as a <script> element), so it survives iframe rebuilds.
+FX_CORE = r"""
 (function(){
-  const P = window.parent, D = P.document;
-  try { const fe = window.frameElement; if (fe) fe.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none'; } catch (e) {}
+  const P = window, D = document;
   if (P.__agronovaFX) { P.__agronovaFX.refresh && P.__agronovaFX.refresh(); return; }
-  P.__agronovaFX = {};
+  P.__agronovaFX = { version: 3 };
   const reduce = P.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const touch = P.matchMedia('(pointer: coarse)').matches;
 
@@ -401,8 +404,6 @@ FX_JS = r"""
   const vwrap = D.createElement('div'); vwrap.id = 'agro-video';
   const veil = D.createElement('div'); veil.id = 'agro-veil';
   const grain = D.createElement('div'); grain.id = 'agro-grain';
-  // Hide this helper iframe itself (prevents a stray empty frame on narrow layouts)
-  try { const fe = window.frameElement; if (fe) fe.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none'; } catch (e) {}
 
   /* Robust two-player playlist:
      - each player loops, so a clip never "ends" into black
@@ -513,13 +514,27 @@ FX_JS = r"""
       const go=()=>v.play().catch(()=>{}); if(v.readyState>=2) go(); else v.addEventListener('canplay',go,{once:true}); });
     if (!D.hidden) D.querySelectorAll('video[autoplay][data-agro]').forEach(v=>{ if (v.paused && v.readyState>=2) v.play().catch(()=>{}); }); }
   let q=false; D.addEventListener('scroll',()=>{ if(q) return; q=true; P.requestAnimationFrame(()=>{ q=false; scan(); }); },{capture:true,passive:true});
-  P.setInterval(scan, 350);
+  P.setInterval(()=>{ P.__agronovaFX.beat = Date.now(); try { scan(); } catch (e) {} }, 350);
   P.__agronovaFX.refresh = scan;
   new P.MutationObserver(()=>{ clearTimeout(P.__agroT); P.__agroT=setTimeout(scan,50); }).observe(D.body,{childList:true,subtree:true});
   scan();
 })();
-</script>
 """
+
+# The helper iframe only (1) hides itself and (2) injects FX_CORE into the page once. It holds no timers of its own.
+FX_JS = """
+<script>
+(function(){
+  try { const fe = window.frameElement; if (fe) fe.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none'; } catch (e) {}
+  const P = window.parent, D = P.document;
+  if (P.__agronovaFX) { try { P.__agronovaFX.refresh && P.__agronovaFX.refresh(); } catch (e) {} return; }
+  const s = D.createElement('script');
+  s.id = 'agronova-fx-core';
+  s.textContent = __CORE__;
+  D.head.appendChild(s);
+})();
+</script>
+""".replace("__CORE__", json.dumps(FX_CORE).replace("</", "<\\/"))
 
 
 def inject() -> None:
