@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AgroNova India Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --ink:#0d0b08; --soil:#17130e; --soil2:#211b14; --soil3:#2b231a; --cream:#f2ead9; --mut:#a59c8a; --dim:#6f675a;
+    --gold:#e8b04a; --gold2:#f3c978; --leaf:#a9d46f; --clay:#d4693f; --sky:#8fc3d6;
+    --serif:'Instrument Serif',Georgia,serif; --sans:'Inter Tight',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+    --ease:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:transparent;font-family:var(--sans);color:var(--cream);overflow:hidden}
+  #wrap{position:relative;height:100%;border-radius:22px;overflow:hidden;isolation:isolate;background:var(--ink);
+        opacity:0;transform:translateY(16px);transition:opacity 1.2s var(--ease),transform 1.4s var(--ease)}
+  #wrap.ready{opacity:1;transform:none}
+  #map{position:absolute;inset:0;background:#120f0b}
+  .leaflet-container{background:#120f0b;font-family:var(--sans);cursor:crosshair}
+  .dark .leaflet-tile-pane .base{filter:sepia(.55) saturate(.75) hue-rotate(-8deg) brightness(.72) contrast(1.12)}
+  .sat{filter:sepia(.2) saturate(.9) brightness(.85)}
+  .leaflet-control-attribution{background:rgba(13,11,8,.6)!important;color:var(--dim)!important;font:9px var(--mono)!important}
+  .leaflet-control-attribution a{color:var(--mut)!important}
+  .leaflet-control-zoom{display:none}
+
+  path.dist{transition:fill-opacity .5s var(--ease),stroke-opacity .5s var(--ease),stroke .5s var(--ease),stroke-width .4s var(--ease),opacity 1s var(--ease);opacity:0}
+  path.dist.show{opacity:1}
+  path.dist.state-hot{fill:var(--gold)!important;fill-opacity:.07!important;stroke-opacity:.4!important}
+  path.dist.hot{fill:var(--gold)!important;fill-opacity:.28!important;stroke:var(--gold2)!important;stroke-opacity:1!important;stroke-width:1.4!important}
+  path.dist.sel{fill:var(--clay)!important;fill-opacity:.38!important;stroke:#f0a07c!important;stroke-opacity:1!important;stroke-width:2!important}
+
+  .fx{position:absolute;inset:0;pointer-events:none;z-index:400}
+  .fx.vig{background:radial-gradient(130% 100% at 50% 45%,transparent 60%,rgba(13,11,8,.7) 100%)}
+
+  .solid{background:var(--soil);box-shadow:0 20px 50px -20px rgba(0,0,0,.8)}
+  .ui{position:absolute;z-index:600}
+  #top{top:16px;left:16px;right:16px;display:flex;gap:10px;align-items:flex-start;pointer-events:none}
+  #top > *{pointer-events:auto}
+  .brand{display:flex;align-items:center;gap:10px;height:46px;padding:0 16px;border-radius:999px;font:500 10.5px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--mut);white-space:nowrap}
+  .brand .pulse{width:7px;height:7px;border-radius:50%;background:var(--leaf);box-shadow:0 0 0 4px rgba(169,212,111,.15)}
+  #searchbox{position:relative;flex:1;max-width:400px}
+  #search{width:100%;height:46px;padding:0 18px 0 44px;border:0;border-radius:999px;color:var(--cream);font:500 14px var(--sans);outline:none;transition:box-shadow .3s}
+  #search::placeholder{color:var(--dim)}
+  #search:focus{box-shadow:0 0 0 2px rgba(232,176,74,.55),0 20px 50px -20px rgba(0,0,0,.8)}
+  #searchbox svg{position:absolute;left:16px;top:50%;transform:translateY(-50%)}
+  #results{position:absolute;top:calc(100% + 8px);left:0;right:0;border-radius:18px;overflow:hidden;padding:6px;
+           opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .35s var(--ease),transform .45s var(--ease)}
+  #results.open{opacity:1;transform:none;pointer-events:auto}
+  .res{padding:10px 12px;border-radius:12px;cursor:pointer;display:flex;justify-content:space-between;gap:10px;font-size:13.5px;transition:background .2s}
+  .res:hover,.res.act{background:var(--soil3)}
+  .res small{color:var(--dim);font:11px var(--mono)}
+  .tools{display:flex;gap:8px;margin-left:auto}
+  .btn{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;cursor:pointer;color:var(--mut);transition:background .3s,color .3s,transform .4s var(--ease)}
+  .btn:hover{background:var(--soil3);color:var(--cream)}
+  .btn:active{transform:scale(.94)}
+  .btn.on{background:var(--cream);color:var(--ink)}
+  .btn[data-tip]{position:relative}
+  .btn[data-tip]:after{content:attr(data-tip);position:absolute;top:calc(100% + 8px);right:0;white-space:nowrap;font:10px var(--mono);letter-spacing:.08em;padding:6px 9px;border-radius:8px;
+       background:var(--soil2);color:var(--cream);opacity:0;transform:translateY(-4px);transition:.3s var(--ease);pointer-events:none}
+  .btn[data-tip]:hover:after{opacity:1;transform:none}
+
+  #chips{left:16px;right:16px;bottom:16px;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px;
+         mask-image:linear-gradient(90deg,#000 88%,transparent)}
+  #chips::-webkit-scrollbar{display:none}
+  .chip{flex:none;padding:10px 15px;border-radius:999px;font:500 12.5px var(--sans);color:var(--mut);cursor:pointer;white-space:nowrap;
+        opacity:0;transform:translateY(12px);transition:transform .8s var(--ease),opacity .8s var(--ease),background .3s,color .3s}
+  .chip.in{opacity:1;transform:none}
+  .chip:hover{background:var(--cream);color:var(--ink)}
+  .chip b{color:var(--cream);font-weight:600;transition:color .3s}
+  .chip:hover b{color:var(--ink)}
+
+  #coords{left:16px;bottom:66px;padding:7px 12px;border-radius:999px;font:500 10px var(--mono);color:var(--dim);letter-spacing:.12em}
+  #coords span{color:var(--cream)}
+
+  #hover{position:absolute;z-index:650;left:0;top:0;pointer-events:none;padding:9px 13px;border-radius:12px;background:var(--cream);color:var(--ink);
+         opacity:0;transition:opacity .25s var(--ease);will-change:transform;white-space:nowrap;box-shadow:0 12px 30px -10px rgba(0,0,0,.6)}
+  #hover b{font:400 18px/1 var(--serif);display:block}
+  #hover small{font:500 9.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#6b5f4d}
+
+  #card{right:16px;top:78px;width:310px;max-height:calc(100% - 156px);overflow:auto;border-radius:20px;padding:20px;
+        opacity:0;transform:translateX(30px);pointer-events:none;transition:opacity .7s var(--ease),transform .9s var(--ease);scrollbar-width:none}
+  #card.open{opacity:1;transform:none;pointer-events:auto}
+  #card .eyebrow{font:500 10px var(--mono);letter-spacing:.18em;color:var(--gold);text-transform:uppercase}
+  #card h2{font:400 34px/1 var(--serif);margin:10px 0 6px;color:var(--cream)}
+  #card .sub{color:var(--mut);font-size:12.5px}
+  .stagger > *{opacity:0;transform:translateY(10px);transition:opacity .6s var(--ease),transform .8s var(--ease)}
+  #card.open .stagger > *{opacity:1;transform:none}
+  #card.open .stagger > *:nth-child(2){transition-delay:.06s} #card.open .stagger > *:nth-child(3){transition-delay:.12s}
+  #card.open .stagger > *:nth-child(4){transition-delay:.18s} #card.open .stagger > *:nth-child(5){transition-delay:.24s}
+  #card.open .stagger > *:nth-child(6){transition-delay:.3s}
+  .kv{display:grid;grid-template-columns:1fr 1fr;margin-top:16px;border-top:1px solid rgba(242,234,217,.08)}
+  .kv div{padding:12px 0;border-bottom:1px solid rgba(242,234,217,.08)}
+  .kv div:nth-child(odd){padding-right:10px;border-right:1px solid rgba(242,234,217,.08)}
+  .kv div:nth-child(even){padding-left:14px}
+  .kv small{display:block;color:var(--dim);font:500 9.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+  .kv b{font:400 26px/1 var(--serif);color:var(--cream)}
+  .bars{display:flex;align-items:flex-end;gap:6px;height:54px;margin-top:16px}
+  .bars i{flex:1;border-radius:3px;background:var(--sky);opacity:.75;height:2px;transition:height 1s var(--ease)}
+  .bars-l{display:flex;gap:6px;margin-top:6px;font:9.5px var(--mono);color:var(--dim)} .bars-l span{flex:1;text-align:center}
+  .shimmer{height:22px;border-radius:5px;background:linear-gradient(90deg,var(--soil2),var(--soil3),var(--soil2));background-size:200% 100%;animation:sh 1.2s infinite}
+  @keyframes sh{to{background-position:-200% 0}}
+  #lock{margin-top:18px;width:100%;height:48px;border:0;border-radius:999px;cursor:pointer;font:600 14px var(--sans);color:var(--ink);background:var(--gold);
+        transition:background .3s,transform .4s var(--ease)}
+  #lock:hover{background:var(--gold2)}
+  #lock:active{transform:scale(.98)}
+  #lock.done{background:var(--leaf)}
+  .close{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:var(--dim);font-size:20px;transition:.3s var(--ease)}
+  .close:hover{background:var(--soil3);color:var(--cream)}
+
+  .pin{position:relative;width:0;height:0}
+  .pin .ring{position:absolute;left:-36px;top:-36px;width:72px;height:72px;border-radius:50%;border:1.5px solid var(--clay);opacity:0;animation:ring 2.6s var(--ease) infinite}
+  .pin .ring:nth-child(2){animation-delay:.85s}.pin .ring:nth-child(3){animation-delay:1.7s}
+  @keyframes ring{0%{transform:scale(.15);opacity:.9}100%{transform:scale(1.5);opacity:0}}
+  .pin .beam{position:absolute;left:-1px;bottom:0;width:2px;height:58px;background:linear-gradient(0deg,var(--cream),transparent);transform-origin:bottom;animation:beam 1s var(--ease) both}
+  @keyframes beam{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  .pin .core{position:absolute;left:-8px;top:-8px;width:16px;height:16px;border-radius:50%;background:var(--cream);border:4px solid var(--clay);animation:drop 1s var(--ease) both}
+  @keyframes drop{from{transform:translateY(-50px) scale(.4);opacity:0}to{transform:none;opacity:1}}
+  .pin.locked .core{border-color:var(--leaf)} .pin.locked .ring{border-color:var(--leaf)}
+
+  .p{position:absolute;width:5px;height:5px;border-radius:50%;pointer-events:none;z-index:700}
+  #loader{position:absolute;inset:0;z-index:800;display:grid;place-items:center;background:var(--ink);transition:opacity 1s var(--ease),visibility 1s}
+  #loader.hide{opacity:0;visibility:hidden}
+  .bar{width:160px;height:1px;background:var(--soil3);overflow:hidden;margin:auto}
+  .bar:after{content:"";display:block;width:40%;height:100%;background:var(--gold);animation:load 1.1s var(--ease) infinite}
+  @keyframes load{from{transform:translateX(-100%)}to{transform:translateX(260%)}}
+  #loader p{margin-top:14px;font:500 10px var(--mono);letter-spacing:.2em;color:var(--dim);text-align:center}
+  #toast{left:50%;top:78px;transform:translate(-50%,-14px);padding:10px 16px;border-radius:999px;font-size:13px;background:var(--cream);color:var(--ink);opacity:0;transition:.5s var(--ease);pointer-events:none}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media (max-width:640px){
+    #card{left:12px;right:12px;width:auto;top:auto;bottom:64px;max-height:56%}
+    .brand .t{display:none} #coords{display:none} #top{top:12px;left:12px;right:12px}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div id="wrap" class="dark">
+  <div id="map"></div>
+  <div class="fx vig"></div>
+
+  <div id="top" class="ui">
+    <div class="brand solid"><span class="pulse"></span><span class="t">India · 758 districts</span></div>
+    <div id="searchbox">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a59c8a" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="search" class="solid" placeholder="Search village, town or district…" autocomplete="off" />
+      <div id="results" class="solid"></div>
+    </div>
+    <div class="tools">
+      <div class="btn solid" id="gps" data-tip="Use my GPS"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg></div>
+      <div class="btn solid" id="sat" data-tip="Satellite view"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg></div>
+      <div class="btn solid" id="home" data-tip="Reset view"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div>
+    </div>
+  </div>
+
+  <div id="toast" class="ui"></div>
+  <div id="hover"><b></b><small></small></div>
+  <div id="coords" class="ui solid">LAT <span id="clat">—</span> · LON <span id="clon">—</span></div>
+
+  <div id="card" class="ui solid">
+    <div class="close" id="close">×</div>
+    <div class="stagger">
+      <div class="eyebrow" id="c-eyebrow">Selected location</div>
+      <div><h2 id="c-title">—</h2><div class="sub" id="c-sub">—</div></div>
+      <div class="kv" id="c-kv"></div>
+      <div id="c-rain"></div>
+      <div class="sub" id="c-note" style="margin-top:10px;line-height:1.5"></div>
+      <button id="lock">Lock this as my farm</button>
+    </div>
+  </div>
+
+  <div id="chips" class="ui"></div>
+  <div id="loader"><div><div class="bar"></div><p>MAPPING 758 DISTRICTS</p></div></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ───────── minimal Streamlit component protocol (no build step) ───────── */
+const ST = {
+  send(type, data){ window.parent.postMessage(Object.assign({isStreamlitMessage:true,type}, data||{}), "*"); },
+  ready(){ this.send("streamlit:componentReady",{apiVersion:1}); },
+  height(h){ this.send("streamlit:setFrameHeight",{height:h}); },
+  value(v){ this.send("streamlit:setComponentValue",{value:v,dataType:"json"}); }
+};
+let ARGS = {height:640, locked:null};
+let booted = false;
+window.addEventListener("message", (e)=>{
+  const d = e.data; if(!d || d.type!=="streamlit:render") return;
+  ARGS = Object.assign(ARGS, d.args||{});
+  ST.height(ARGS.height||640);
+  if(!booted){ booted = true; boot(); }
+  else if(ARGS.locked && !current) showLocked(ARGS.locked, false);
+});
+ST.ready();
+setTimeout(()=>{ if(!booted){ booted=true; boot(); } }, 1500); // standalone preview
+
+const AGRI_HUBS = [
+  ["Ludhiana","Punjab · wheat–rice",30.90,75.85],["Nashik","Maharashtra · onion & grapes",19.99,73.79],
+  ["Thanjavur","Tamil Nadu · rice bowl",10.79,79.14],["Jodhpur","Rajasthan · bajra & guar",26.24,73.02],
+  ["Guntur","Andhra Pradesh · chilli",16.31,80.44],["Indore","Madhya Pradesh · soybean",22.72,75.86],
+  ["Karnal","Haryana · basmati",29.69,76.99],["Rajkot","Gujarat · groundnut",22.30,70.80],
+  ["Jorhat","Assam · tea",26.75,94.20],["Mandya","Karnataka · sugarcane",12.52,76.90],
+  ["Shimla","Himachal · apple",31.10,77.17],["Bardhaman","West Bengal · rice",23.23,87.86],
+  ["Kozhikode","Kerala · coconut & spice",11.26,75.78],["Sambalpur","Odisha · paddy",21.47,83.97],
+];
+const NOTES = {
+  "Punjab":"Alluvial loam · rice–wheat belt · watch groundwater","Haryana":"Basmati, wheat, mustard · saline patches in south-west",
+  "Rajasthan":"Arid sandy soils · bajra, guar, mustard, cumin","Gujarat":"Black & alluvial · cotton, groundnut, cumin",
+  "Maharashtra":"Deccan black soil · cotton, soybean, onion, grapes","Madhya Pradesh":"Black soils · soybean then wheat/chickpea",
+  "Uttar Pradesh":"Gangetic alluvium · wheat, sugarcane, potato","Bihar":"Flood-prone alluvium · rice, maize, makhana",
+  "West Bengal":"Alluvial · three rice seasons, jute, potato","Odisha":"Red laterite, often acidic · paddy, pulses",
+  "Andhra Pradesh":"Delta + black soils · rice, chilli, cotton","Telangana":"Red/black · cotton, rice, maize",
+  "Karnataka":"Red & black soils · ragi, maize, coffee","Tamil Nadu":"NE monsoon Oct–Dec · rice, banana, sugarcane",
+  "Kerala":"Acidic laterite · coconut, rubber, spices","Assam":"Acidic alluvium · tea, Sali rice, floods Jun–Sep",
+  "Himachal Pradesh":"Hill soils · apple & off-season veg","Uttarakhand":"Hill + Tarai · millets, rice, horticulture",
+  "Jammu and Kashmir":"Temperate · apple, saffron, walnut","Chhattisgarh":"Rice bowl of India · minor millets",
+  "Jharkhand":"Acidic plateau · rice, pulses, liming helps"
+};
+
+let map, base, sat, labels, geo, current=null, marker=null, hoverFeature=null;
+const byState = {};
+const $ = s=>document.querySelector(s);
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2600); }
+
+function boot(){
+  map = L.map("map",{zoomControl:false,attributionControl:true,zoomSnap:.1,zoomDelta:.5,wheelPxPerZoomLevel:110,
+        wheelDebounceTime:25,inertia:true,inertiaDeceleration:2400,easeLinearity:.18,minZoom:3.6,maxZoom:15,
+        worldCopyJump:false,fadeAnimation:true,zoomAnimation:true,markerZoomAnimation:true})
+        .setView([22,80],3.6);
+  map.createPane("labels"); map.getPane("labels").style.zIndex=450; map.getPane("labels").style.pointerEvents="none";
+  base = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+        {className:"base",maxNativeZoom:16,attribution:"Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors"}).addTo(map);
+  sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {className:"sat",attribution:"Imagery © Esri, Maxar, Earthstar"});
+  labels = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",{pane:"labels",opacity:.55,maxNativeZoom:16}).addTo(map);
+
+  // live coordinates readout (rAF throttled)
+  let mm=null; map.on("mousemove",e=>{mm=e.latlng;}); (function tick(){ if(mm){$("#clat").textContent=mm.lat.toFixed(4);$("#clon").textContent=mm.lng.toFixed(4);mm=null;} requestAnimationFrame(tick);})();
+
+  fetch("./india_districts.json").then(r=>r.json()).then(data=>{
+    geo = L.geoJSON(data,{
+      style:()=>({color:"#f2ead9",weight:.5,opacity:.2,fillColor:"#e8b04a",fillOpacity:0,className:"dist"}),
+      onEachFeature:(f,layer)=>{
+        (byState[f.properties.s] ||= []).push(layer);
+        layer.on({
+          mouseover:e=>hoverOn(f,layer,e), mouseout:()=>hoverOff(f,layer),
+          click:e=>select(e.latlng.lat,e.latlng.lng,{feature:f,layer,source:"map"})
+        });
+      }
+    }).addTo(map);
+    // ripple reveal: districts fade in by distance from the centre of India
+    const c = L.latLng(22.5,79);
+    geo.eachLayer(l=>{ const d = l.getBounds().getCenter().distanceTo(c)/1000; const el=l.getElement(); if(el){ el.style.transitionDelay=(Math.min(d,2200)/2200*1.1).toFixed(2)+"s"; }});
+    requestAnimationFrame(()=>{ $("#loader").classList.add("hide"); $("#wrap").classList.add("ready");
+      setTimeout(()=>{ geo.eachLayer(l=>l.getElement()&&l.getElement().classList.add("show"));
+        map.flyToBounds([[7,68],[35.5,97.5]],{duration:2.2,easeLinearity:.12,padding:[20,20]});
+        setTimeout(()=>geo.eachLayer(l=>{const el=l.getElement(); if(el) el.style.transitionDelay="0s";}),2600);
+        if(ARGS.locked) setTimeout(()=>showLocked(ARGS.locked,true),2400);
+      },350);
+      document.querySelectorAll(".chip").forEach((c,i)=>setTimeout(()=>c.classList.add("in"),900+i*70));
+    });
+  }).catch(()=>{ $("#loader").classList.add("hide"); $("#wrap").classList.add("ready"); toast("District layer failed to load — map still works"); });
+
+  buildChips(); wireSearch(); wireButtons(); glideHover();
+}
+
+/* ───────── hover: state glow + district highlight + gliding label ───────── */
+let hx=0,hy=0,tx=0,ty=0;
+function glideHover(){
+  const h=$("#hover");
+  map.on("mousemove",e=>{ tx=e.containerPoint.x+18; ty=e.containerPoint.y+18; });
+  (function loop(){ hx+=(tx-hx)*.18; hy+=(ty-hy)*.18; h.style.transform=`translate3d(${hx}px,${hy}px,0)`; requestAnimationFrame(loop); })();
+}
+function hoverOn(f,layer){
+  hoverFeature=f;
+  (byState[f.properties.s]||[]).forEach(l=>l.getElement()&&l.getElement().classList.add("state-hot"));
+  layer.getElement().classList.add("hot"); layer.bringToFront();
+  if(current && current.layer) current.layer.bringToFront();
+  const h=$("#hover"); h.querySelector("b").textContent=f.properties.d||f.properties.s; h.querySelector("small").textContent=f.properties.d?f.properties.s:"India"; h.style.opacity=1;
+}
+function hoverOff(f,layer){
+  (byState[f.properties.s]||[]).forEach(l=>l.getElement()&&l.getElement().classList.remove("state-hot"));
+  layer.getElement().classList.remove("hot"); $("#hover").style.opacity=0;
+}
+
+/* ───────── point-in-polygon to find the district for any coordinate ───────── */
+function inRing(x,y,ring){ let ins=false; for(let i=0,j=ring.length-1;i<ring.length;j=i++){ const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
+  if(((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) ins=!ins; } return ins; }
+function findDistrict(lat,lon){
+  let hit=null; if(!geo) return null;
+  geo.eachLayer(l=>{ if(hit) return; if(!l.getBounds().contains([lat,lon])) return;
+    for(const poly of l.feature.geometry.coordinates){ if(inRing(lon,lat,poly[0]) && !poly.slice(1).some(h=>inRing(lon,lat,h))){ hit={feature:l.feature,layer:l}; return; } } });
+  return hit;
+}
+
+/* ───────── selection ───────── */
+function select(lat,lon,opts={}){
+  const hit = opts.feature ? {feature:opts.feature,layer:opts.layer} : findDistrict(lat,lon);
+  if(current && current.layer && current.layer.getElement()) current.layer.getElement().classList.remove("sel");
+  current = {lat,lon,district:hit?hit.feature.properties.d:(opts.name||""),state:hit?hit.feature.properties.s:(opts.state||""),layer:hit&&hit.layer,source:opts.source||"map",label:opts.name||""};
+  if(hit){ hit.layer.getElement().classList.add("sel"); hit.layer.bringToFront(); }
+  placeMarker(lat,lon,false);
+  const z = Math.max(map.getZoom(), 7.2);
+  const off = window.innerWidth>640 ? 150 : 0;  // keep pin clear of the side card
+  const target = map.unproject(map.project([lat,lon],z).add([off,0]),z);
+  map.flyTo(target,z,{duration:1.6,easeLinearity:.15});
+  openCard(current);
+  if(!hit && opts.source!=="locked") toast("Outside India's district map — location still usable");
+}
+function placeMarker(lat,lon,locked){
+  if(marker) map.removeLayer(marker);
+  marker = L.marker([lat,lon],{icon:L.divIcon({className:"",html:`<div class="pin ${locked?"locked":""}"><div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="beam"></div><div class="core"></div></div>`,iconSize:[0,0]}),interactive:false}).addTo(map);
+}
+function showLocked(l,fly){
+  current={...l,layer:null,locked:true};
+  const hit=findDistrict(l.lat,l.lon); if(hit){ current.layer=hit.layer; hit.layer.getElement().classList.add("sel"); }
+  placeMarker(l.lat,l.lon,true);
+  if(fly) map.flyTo([l.lat,l.lon],7.5,{duration:1.8,easeLinearity:.15});
+  openCard(current,true);
+}
+
+/* ───────── info card with live weather ───────── */
+function openCard(c,locked=false){
+  const card=$("#card"); card.classList.remove("open"); void card.offsetWidth;
+  $("#c-eyebrow").textContent = locked?"Your farm · locked":"Selected location";
+  $("#c-title").textContent = c.district || c.label || "Pinned point";
+  $("#c-sub").textContent = `${c.state||"Unknown state"} · ${c.lat.toFixed(3)}°, ${c.lon.toFixed(3)}°`;
+  $("#c-note").innerHTML = NOTES[c.state] ? `<b style="color:var(--cream)">${c.state}</b> — ${NOTES[c.state]}` : "Lock this spot and every AgroNova answer will be tailored to it.";
+  $("#c-kv").innerHTML = `<div><small>Temp</small><div class="shimmer"></div></div><div><small>Humidity</small><div class="shimmer"></div></div><div><small>Rain today</small><div class="shimmer"></div></div><div><small>Elevation</small><div class="shimmer"></div></div>`;
+  $("#c-rain").innerHTML = "";
+  const btn=$("#lock"); btn.classList.toggle("done",locked); btn.textContent = locked?"Farm locked ✓":"Lock this as my farm";
+  requestAnimationFrame(()=>card.classList.add("open"));
+  const req = c; // ignore stale responses
+  fetch(`https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,relative_humidity_2m,weather_code&daily=precipitation_sum&forecast_days=7&timezone=auto`)
+    .then(r=>r.json()).then(w=>{ if(current!==req) return;
+      const d=w.daily||{}; const rain=d.precipitation_sum||[];
+      $("#c-kv").innerHTML = `<div><small>Temp</small><b>${Math.round(w.current.temperature_2m)}°C</b></div><div><small>Humidity</small><b>${w.current.relative_humidity_2m}%</b></div><div><small>Rain today</small><b>${(rain[0]??0).toFixed(1)} mm</b></div><div><small>Elevation</small><b>${Math.round(w.elevation)} m</b></div>`;
+      const mx=Math.max(4,...rain); const days=(d.time||[]).map(t=>new Date(t).toLocaleDateString("en",{weekday:"short"}).slice(0,2));
+      $("#c-rain").innerHTML = `<div class="bars">${rain.map(()=>"<i></i>").join("")}</div><div class="bars-l">${days.map(x=>`<span>${x}</span>`).join("")}</div><div class="sub" style="margin-top:6px">Seven-day rain · ${rain.reduce((a,b)=>a+b,0).toFixed(1)} mm total</div>`;
+      requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll(".bars i").forEach((b,i)=>{ b.style.transitionDelay=(i*60)+"ms"; b.style.height=Math.max(3,rain[i]/mx*40)+"px"; })));
+    }).catch(()=>{ $("#c-kv").innerHTML='<div style="grid-column:span 2"><small>Live weather</small><b>offline</b></div>'; });
+}
+
+function burst(x,y){
+  const cols=["#e8b04a","#a9d46f","#d4693f","#f2ead9"]; const wrap=$("#wrap");
+  for(let i=0;i<28;i++){ const p=document.createElement("div"); p.className="p"; p.style.background=cols[i%4]; p.style.left=x+"px"; p.style.top=y+"px"; wrap.appendChild(p);
+    const a=Math.random()*Math.PI*2, r=60+Math.random()*90;
+    p.animate([{transform:"translate(0,0) scale(1)",opacity:1},{transform:`translate(${Math.cos(a)*r}px,${Math.sin(a)*r}px) scale(0)`,opacity:0}],{duration:900+Math.random()*500,easing:"cubic-bezier(.22,1,.36,1)"}).onfinish=()=>p.remove(); }
+}
+
+/* ───────── UI wiring ───────── */
+function wireButtons(){
+  $("#close").onclick=()=>$("#card").classList.remove("open");
+  $("#home").onclick=()=>map.flyToBounds([[7,68],[35.5,97.5]],{duration:1.6,easeLinearity:.15});
+  $("#sat").onclick=()=>{ const on=!map.hasLayer(sat); const b=$("#sat"); b.classList.toggle("on",on);
+    if(on){ sat.setOpacity(0).addTo(map); $("#wrap").classList.remove("dark"); let o=0; (function f(){o=Math.min(1,o+.05); sat.setOpacity(o); if(o<1) requestAnimationFrame(f);})(); }
+    else { $("#wrap").classList.add("dark"); let o=1; (function f(){o=Math.max(0,o-.06); sat.setOpacity(o); if(o>0) requestAnimationFrame(f); else map.removeLayer(sat);})(); } };
+  $("#gps").onclick=()=>{
+    if(!navigator.geolocation){ toast("GPS not available in this browser"); return; }
+    toast("Locating you…");
+    navigator.geolocation.getCurrentPosition(p=>select(p.coords.latitude,p.coords.longitude,{source:"gps",name:"My location"}),
+      ()=>toast("GPS blocked here — search or tap the map instead"),{enableHighAccuracy:true,timeout:9000});
+  };
+  $("#lock").onclick=(e)=>{
+    if(!current) return;
+    const r=e.target.getBoundingClientRect(), w=$("#wrap").getBoundingClientRect(); burst(r.left-w.left+r.width/2, r.top-w.top+r.height/2);
+    const v={lat:+current.lat.toFixed(5),lon:+current.lon.toFixed(5),district:current.district||current.label||"",state:current.state||"",country:"India",source:current.source||"map",ts:Date.now()};
+    ST.value(v); current.locked=true; placeMarker(current.lat,current.lon,true);
+    const b=$("#lock"); b.classList.add("done"); b.textContent="Farm locked ✓"; $("#c-eyebrow").textContent="Your farm · locked";
+    toast(`Farm locked: ${v.district||"pin"}, ${v.state}`);
+  };
+}
+function buildChips(){
+  const box=$("#chips");
+  AGRI_HUBS.forEach(([n,d,lat,lon])=>{ const c=document.createElement("div"); c.className="chip solid"; c.innerHTML=`<b>${n}</b> · ${d}`;
+    c.onclick=()=>select(lat,lon,{source:"hub",name:n}); box.appendChild(c); });
+}
+function wireSearch(){
+  const inp=$("#search"), res=$("#results"); let t, items=[], act=-1;
+  const render=()=>{ res.innerHTML = items.map((r,i)=>`<div class="res ${i===act?"act":""}" data-i="${i}"><span>${r.name}</span><small>${[r.admin2,r.admin1].filter(Boolean).join(", ")}</small></div>`).join("") || `<div class="res"><small>No match in India</small></div>`;
+    res.classList.add("open"); res.querySelectorAll(".res[data-i]").forEach(el=>el.onclick=()=>pick(+el.dataset.i)); };
+  const pick=i=>{ const r=items[i]; if(!r) return; res.classList.remove("open"); inp.value=r.name; inp.blur(); select(r.latitude,r.longitude,{source:"search",name:r.name,state:r.admin1}); };
+  inp.addEventListener("input",()=>{ clearTimeout(t); const q=inp.value.trim(); if(q.length<2){res.classList.remove("open");return;}
+    t=setTimeout(()=>fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&countryCode=IN&language=en`).then(r=>r.json()).then(j=>{items=j.results||[];act=-1;render();}),220); });
+  inp.addEventListener("keydown",e=>{ if(!res.classList.contains("open")) return;
+    if(e.key==="ArrowDown"){act=Math.min(items.length-1,act+1);render();e.preventDefault();}
+    if(e.key==="ArrowUp"){act=Math.max(0,act-1);render();e.preventDefault();}
+    if(e.key==="Enter"){pick(act<0?0:act);} if(e.key==="Escape"){res.classList.remove("open");} });
+  document.addEventListener("click",e=>{ if(!$("#searchbox").contains(e.target)) res.classList.remove("open"); });
+}
+</script>
+</body>
+</html>
