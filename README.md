@@ -18,8 +18,8 @@
 🌐 Live app → https://genai-fa-kqthfygr5t4appvkkx546sz.streamlit.app/
 </div>
 
-</p>
-Canva-Storyboard Link: https://canva.link/8336r2075jfntnr
+<div align="center">
+  <a href="https://canva.link/8336r2075jfntnr">Canva Storyboard Link</a>
 </div>
 
 ---
