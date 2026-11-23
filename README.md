@@ -17,7 +17,7 @@
 
 🌐 Live app → https://genai-fa-kqthfygr5t4appvkkx546sz.streamlit.app/
 </div>
-Canva-Storyboard Link: https://www.canva.com/design/DAHbwMYIpUQ/tjysc4TmHvdHiww7AqW_jQ/edit?ui=e30
+Canva-Storyboard Link: https://canva.link/8336r2075jfntnr
 </div>
 
 ---
